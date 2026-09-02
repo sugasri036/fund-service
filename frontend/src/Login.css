@@ -1,0 +1,259 @@
+.login-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f8fc;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 430px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 42px 42px 35px;
+  box-sizing: border-box;
+  box-shadow: 0 15px 45px rgba(15, 50, 90, 0.10);
+  border: 1px solid #e5edf6;
+}
+
+/* =========================
+   LOGO
+   ========================= */
+
+.login-logo {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: #12396f;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 auto 22px;
+}
+
+/* =========================
+   HEADING
+   ========================= */
+
+.login-card h1 {
+  margin: 0;
+  text-align: center;
+  color: #12396f;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.login-subtitle {
+  text-align: center;
+  color: #718096;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 10px 0 30px;
+}
+
+/* =========================
+   GOOGLE BUTTON
+   ========================= */
+
+.google-login-btn {
+  width: 100%;
+  height: 50px;
+  border: 1px solid #d7e0ea;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #263238;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  transition: all 0.2s ease;
+}
+
+.google-login-btn:hover {
+  background: #f8fafc;
+  border-color: #b9c8d8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.google-icon {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4285f4;
+}
+
+/* =========================
+   DIVIDER
+   ========================= */
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 25px 0;
+  color: #9aa8b6;
+  font-size: 12px;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  height: 1px;
+  background: #e4eaf0;
+  flex: 1;
+}
+
+.login-divider span {
+  flex-shrink: 0;
+}
+
+/* =========================
+   INPUT FIELDS
+   ========================= */
+
+.login-field {
+  margin-bottom: 18px;
+}
+
+.login-field label {
+  display: block;
+  margin-bottom: 7px;
+  color: #243b53;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-field input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  box-sizing: border-box;
+
+  border: 1px solid #d7e0ea;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #243b53;
+  font-size: 14px;
+
+  outline: none;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-field input::placeholder {
+  color: #a0aec0;
+}
+
+.login-field input:focus {
+  border-color: #2864a8;
+  box-shadow: 0 0 0 3px rgba(40, 100, 168, 0.10);
+}
+
+/* =========================
+   OPTIONS
+   ========================= */
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 3px 0 22px;
+  font-size: 13px;
+}
+
+.login-options label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #718096;
+}
+
+.login-options input {
+  accent-color: #12396f;
+}
+
+.login-options a {
+  color: #1769aa;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.login-options a:hover {
+  text-decoration: underline;
+}
+
+/* =========================
+   SIGN IN BUTTON
+   ========================= */
+
+.login-btn {
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: 9px;
+
+  background: #12396f;
+  color: white;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-btn:hover {
+  background: #0e2f5c;
+  transform: translateY(-1px);
+}
+
+/* =========================
+   SIGN UP
+   ========================= */
+
+.signup-text {
+  text-align: center;
+  color: #718096;
+  font-size: 13px;
+  margin: 25px 0 0;
+}
+
+.signup-text a {
+  color: #1769aa;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.signup-text a:hover {
+  text-decoration: underline;
+}
+
+/* =========================
+   MOBILE
+   ========================= */
+
+@media (max-width: 500px) {
+
+  .login-page {
+    padding: 20px;
+  }
+
+  .login-card {
+    padding: 32px 24px;
+  }
+
+  .login-card h1 {
+    font-size: 24px;
+  }
+}
