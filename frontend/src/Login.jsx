@@ -21,7 +21,7 @@ function Login({ onLogin, onCreateAccount }) {
     try {
       setLoading(true);
 
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      const response = await fetch("https://api-gateway-rz13.onrender.com/api/auth/login", {
         method: "POST",
 
         headers: {
@@ -57,7 +57,7 @@ function Login({ onLogin, onCreateAccount }) {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:8080/oauth2/authorization/google";
+    window.location.href = "https://api-gateway-rz13.onrender.com/oauth2/authorization/google";
   };
 
   return (

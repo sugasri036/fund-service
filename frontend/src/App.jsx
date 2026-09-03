@@ -5,8 +5,7 @@ import Register from "./Register";
 /* =====================================================
    CONFIG
 ===================================================== */
-
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "https://api-gateway-rz13.onrender.com";
 
 /* =====================================================
    SAMPLE FALLBACK DATA

@@ -34,7 +34,7 @@ function Register({ onRegister, onBackToLogin }) {
       setLoading(true);
 
       const response = await fetch(
-        "http://localhost:8080/api/auth/register",
+        "https://api-gateway-rz13.onrender.com/api/auth/register",
         {
           method: "POST",
           headers: {
