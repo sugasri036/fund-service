@@ -18,21 +18,29 @@ public class FundService {
         this.fundRepository = fundRepository;
     }
 
-    public Page<Fund> getFunds(
-            String search,
-            String category,
-            int page,
-            int size
-    ) {
-
-        Pageable pageable = PageRequest.of(page, size);
-
-        return fundRepository.searchAndFilter(
-                search,
-                category,
-                pageable
-        );
+    
+   public Page<Fund> getFunds(
+        String search,
+        String category,
+        int page,
+        int size
+) {
+    if (search == null) {
+        search = "";
     }
+
+    if (category == null) {
+        category = "";
+    }
+
+    Pageable pageable = PageRequest.of(page, size);
+
+    return fundRepository.searchAndFilter(
+            search,
+            category,
+            pageable
+    );
+}
 
     public Fund getFundById(Long id) {
 
