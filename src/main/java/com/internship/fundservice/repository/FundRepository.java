@@ -1,7 +1,6 @@
 package com.internship.fundservice.repository;
 
 import com.internship.fundservice.entity.Fund;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
