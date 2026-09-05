@@ -257,3 +257,542 @@
     font-size: 24px;
   }
 }
+
+/* =====================================================
+   FORGOT PASSWORD
+   ===================================================== */
+
+.forgot-password-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
+
+/* =====================================================
+   OVERLAY
+   ===================================================== */
+
+.forgot-password-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  z-index: 9999;
+}
+
+
+/* =====================================================
+   MODAL
+   ===================================================== */
+
+.forgot-password-modal {
+  position: relative;
+
+  width: 100%;
+  max-width: 460px;
+
+  background: #ffffff;
+
+  border-radius: 20px;
+
+  padding: 36px;
+
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.25);
+
+  animation: forgotModalIn 0.2s ease-out;
+}
+
+@keyframes forgotModalIn {
+
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+}
+
+
+/* =====================================================
+   CLOSE BUTTON
+   ===================================================== */
+
+.forgot-close-btn {
+  position: absolute;
+
+  top: 16px;
+  right: 18px;
+
+  width: 34px;
+  height: 34px;
+
+  border: none;
+  background: transparent;
+
+  font-size: 28px;
+  line-height: 1;
+
+  color: #64748b;
+
+  cursor: pointer;
+
+  border-radius: 50%;
+}
+
+.forgot-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+
+/* =====================================================
+   ICON
+   ===================================================== */
+
+.forgot-icon {
+  width: 54px;
+  height: 54px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #eef2ff;
+
+  border-radius: 16px;
+
+  font-size: 25px;
+
+  margin-bottom: 18px;
+}
+
+
+/* =====================================================
+   TEXT
+   ===================================================== */
+
+.forgot-password-modal h2 {
+  margin: 0 0 8px;
+
+  font-size: 26px;
+
+  color: #0f172a;
+}
+
+.forgot-subtitle {
+  margin: 0 0 24px;
+
+  color: #64748b;
+
+  font-size: 14px;
+
+  line-height: 1.6;
+}
+
+
+/* =====================================================
+   STEPS
+   ===================================================== */
+
+.forgot-steps {
+  display: flex;
+  align-items: center;
+
+  margin-bottom: 24px;
+}
+
+.forgot-step {
+  width: 32px;
+  height: 32px;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #e2e8f0;
+
+  color: #64748b;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  flex-shrink: 0;
+}
+
+.forgot-step.active {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.forgot-step-line {
+  flex: 1;
+
+  height: 1px;
+
+  background: #e2e8f0;
+
+  margin: 0 8px;
+}
+
+
+/* =====================================================
+   ERROR / SUCCESS
+   ===================================================== */
+
+.forgot-error {
+  padding: 12px 14px;
+
+  margin-bottom: 18px;
+
+  border-radius: 10px;
+
+  background: #fef2f2;
+
+  color: #b91c1c;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+.forgot-success {
+  padding: 12px 14px;
+
+  margin-bottom: 18px;
+
+  border-radius: 10px;
+
+  background: #f0fdf4;
+
+  color: #15803d;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+
+/* =====================================================
+   EMAIL DISPLAY
+   ===================================================== */
+
+.forgot-email-display {
+  padding: 12px 14px;
+
+  margin-bottom: 18px;
+
+  border-radius: 10px;
+
+  background: #f8fafc;
+
+  color: #64748b;
+
+  font-size: 13px;
+
+  line-height: 1.6;
+}
+
+.forgot-email-display strong {
+  display: block;
+
+  color: #0f172a;
+
+  margin-top: 2px;
+
+  word-break: break-word;
+}
+
+
+/* =====================================================
+   BACK BUTTON
+   ===================================================== */
+
+.forgot-back-btn {
+  width: 100%;
+
+  margin-top: 12px;
+
+  padding: 11px;
+
+  border: none;
+
+  background: transparent;
+
+  color: #475569;
+
+  font-size: 14px;
+
+  cursor: pointer;
+
+  border-radius: 8px;
+}
+
+.forgot-back-btn:hover {
+  background: #f8fafc;
+}
+
+
+/* =====================================================
+   MOBILE
+   ===================================================== */
+
+@media (max-width: 520px) {
+
+  .forgot-password-modal {
+    padding: 28px 22px;
+
+    border-radius: 16px;
+  }
+
+  .forgot-password-modal h2 {
+    font-size: 22px;
+  }
+
+}
+/* =====================================================
+   FORGOT PASSWORD MODAL
+===================================================== */
+
+.forgot-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 18, 30, 0.65);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    z-index: 9999;
+
+    backdrop-filter: blur(5px);
+}
+
+
+.forgot-modal {
+    position: relative;
+
+    width: 100%;
+    max-width: 440px;
+
+    background: #ffffff;
+
+    border-radius: 18px;
+
+    padding: 36px;
+
+    box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.25);
+
+    animation: forgotModalIn 0.2s ease-out;
+}
+
+
+@keyframes forgotModalIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+.forgot-close {
+    position: absolute;
+
+    top: 14px;
+    right: 16px;
+
+    width: 34px;
+    height: 34px;
+
+    border: none;
+
+    background: transparent;
+
+    font-size: 28px;
+
+    line-height: 1;
+
+    color: #64748b;
+
+    cursor: pointer;
+
+    border-radius: 50%;
+}
+
+
+.forgot-close:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+
+.forgot-icon {
+    width: 58px;
+    height: 58px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin: 0 auto 18px;
+
+    border-radius: 16px;
+
+    background: #eef6f2;
+
+    font-size: 28px;
+}
+
+
+.forgot-modal h2 {
+    margin: 0;
+
+    text-align: center;
+
+    font-size: 26px;
+
+    font-weight: 700;
+
+    color: #0f172a;
+}
+
+
+.forgot-description {
+    margin: 10px 0 25px;
+
+    text-align: center;
+
+    color: #64748b;
+
+    font-size: 14px;
+
+    line-height: 1.6;
+}
+
+
+.forgot-description strong {
+    color: #334155;
+}
+
+
+.forgot-success {
+    margin: 12px 0;
+
+    padding: 11px 13px;
+
+    border-radius: 8px;
+
+    background: #ecfdf5;
+
+    color: #047857;
+
+    font-size: 13px;
+
+    line-height: 1.5;
+}
+
+
+.forgot-secondary-btn {
+    width: 100%;
+
+    margin-top: 10px;
+
+    padding: 12px;
+
+    border: 1px solid #d7dee7;
+
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    color: #475569;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+
+.forgot-secondary-btn:hover {
+    background: #f8fafc;
+}
+
+
+.forgot-complete {
+    text-align: center;
+}
+
+
+.forgot-success-icon {
+    width: 64px;
+    height: 64px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin: 0 auto 18px;
+
+    border-radius: 50%;
+
+    background: #ecfdf5;
+
+    color: #059669;
+
+    font-size: 34px;
+
+    font-weight: 700;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 480px) {
+
+    .forgot-modal {
+        padding: 30px 22px;
+
+        border-radius: 16px;
+    }
+
+    .forgot-modal h2 {
+        font-size: 23px;
+    }
+
+}
