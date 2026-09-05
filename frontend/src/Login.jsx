@@ -4,7 +4,6 @@ import "./Login.css";
 const API_BASE_URL = "https://api-gateway-rz13.onrender.com";
 
 function Login({ onLogin, onCreateAccount }) {
-
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -16,72 +15,108 @@ function Login({ onLogin, onCreateAccount }) {
     // =====================================================
 
     const [showForgotPassword, setShowForgotPassword] = useState(false);
-
     const [forgotStep, setForgotStep] = useState(1);
 
     const [forgotEmail, setForgotEmail] = useState("");
-
     const [otp, setOtp] = useState("");
-
     const [sessionToken, setSessionToken] = useState("");
 
     const [newPassword, setNewPassword] = useState("");
-
     const [confirmPassword, setConfirmPassword] = useState("");
 
     const [forgotMessage, setForgotMessage] = useState("");
-
     const [forgotError, setForgotError] = useState("");
-
     const [forgotLoading, setForgotLoading] = useState(false);
 
+    // =====================================================
+    // SAFE API RESPONSE HANDLER
+    // =====================================================
+
+    const readApiResponse = async (response) => {
+        const contentType =
+            response.headers.get("content-type") || "";
+
+        const text = await response.text();
+
+        // Normal JSON response
+        if (contentType.includes("application/json")) {
+            try {
+                return text ? JSON.parse(text) : {};
+            } catch {
+                throw new Error(
+                    "The server returned invalid JSON."
+                );
+            }
+        }
+
+        // Server returned HTML instead of JSON
+        if (text.trim().startsWith("<!DOCTYPE") ||
+            text.trim().startsWith("<html") ||
+            text.trim().startsWith("<")) {
+
+            throw new Error(
+                `Server returned an HTML page instead of an API response. HTTP ${response.status}.`
+            );
+        }
+
+        return {
+            message: text || `Request failed with HTTP ${response.status}`
+        };
+    };
 
     // =====================================================
     // NORMAL LOGIN
     // =====================================================
 
     const handleLogin = async (e) => {
-
         e.preventDefault();
 
         setError("");
 
         if (!email || !password) {
-            setError("Please enter your email and password.");
+            setError(
+                "Please enter your email and password."
+            );
             return;
         }
 
         try {
-
             setLoading(true);
 
             const response = await fetch(
                 `${API_BASE_URL}/api/auth/login`,
                 {
                     method: "POST",
-
                     headers: {
                         "Content-Type": "application/json",
                     },
-
                     body: JSON.stringify({
-                        email: email,
+                        email: email.trim(),
                         password: password,
                     }),
                 }
             );
 
-            const data = await response.json();
+            const data =
+                await readApiResponse(response);
 
             if (!response.ok) {
                 throw new Error(
-                    data.error || "Invalid email or password"
+                    data.error ||
+                    data.message ||
+                    "Invalid email or password."
                 );
             }
 
-            // Save JWT
-            localStorage.setItem("jwt", data.token);
-            localStorage.setItem("token", data.token);
+            localStorage.setItem(
+                "jwt",
+                data.token
+            );
+
+            localStorage.setItem(
+                "token",
+                data.token
+            );
 
             localStorage.setItem(
                 "user",
@@ -94,42 +129,36 @@ function Login({ onLogin, onCreateAccount }) {
             );
 
             if (onLogin) {
-                onLogin(data.token, data.user);
+                onLogin(
+                    data.token,
+                    data.user
+                );
             }
 
         } catch (error) {
-
             setError(
                 error.message ||
                 "Login failed. Please try again."
             );
-
         } finally {
-
             setLoading(false);
-
         }
     };
-
 
     // =====================================================
     // GOOGLE LOGIN
     // =====================================================
 
     const handleGoogleLogin = () => {
-
         window.location.href =
             `${API_BASE_URL}/oauth2/authorization/google`;
-
     };
-
 
     // =====================================================
     // OPEN FORGOT PASSWORD
     // =====================================================
 
     const openForgotPassword = (e) => {
-
         e.preventDefault();
 
         setForgotEmail(email);
@@ -137,27 +166,22 @@ function Login({ onLogin, onCreateAccount }) {
         setForgotStep(1);
 
         setForgotMessage("");
-
         setForgotError("");
 
         setOtp("");
-
         setSessionToken("");
 
         setNewPassword("");
-
         setConfirmPassword("");
 
         setShowForgotPassword(true);
     };
-
 
     // =====================================================
     // CLOSE FORGOT PASSWORD
     // =====================================================
 
     const closeForgotPassword = () => {
-
         if (forgotLoading) {
             return;
         }
@@ -167,69 +191,78 @@ function Login({ onLogin, onCreateAccount }) {
         setForgotStep(1);
 
         setForgotMessage("");
-
         setForgotError("");
-    };
 
+        setOtp("");
+        setSessionToken("");
+
+        setNewPassword("");
+        setConfirmPassword("");
+    };
 
     // =====================================================
     // STEP 1 - SEND OTP
     // =====================================================
 
     const handleSendOtp = async (e) => {
-
         e.preventDefault();
 
         setForgotError("");
-
         setForgotMessage("");
 
-        if (!forgotEmail) {
+        const normalizedEmail =
+            forgotEmail.trim().toLowerCase();
 
+        if (!normalizedEmail) {
             setForgotError(
                 "Please enter your email address."
             );
-
             return;
         }
 
         try {
-
             setForgotLoading(true);
 
             const response = await fetch(
                 `${API_BASE_URL}/api/auth/forgot-password`,
                 {
                     method: "POST",
-
                     headers: {
-                        "Content-Type": "application/json",
+                        "Content-Type":
+                            "application/json",
+                        "Accept":
+                            "application/json",
                     },
-
                     body: JSON.stringify({
-                        email: forgotEmail,
+                        email: normalizedEmail,
                     }),
                 }
             );
 
-            const data = await response.json();
+            const data =
+                await readApiResponse(response);
 
             if (!response.ok) {
-
                 throw new Error(
                     data.message ||
                     data.error ||
-                    "Could not send OTP."
+                    `Could not send OTP. HTTP ${response.status}`
                 );
             }
 
+            setForgotEmail(normalizedEmail);
+
             setForgotMessage(
-                "OTP sent successfully. Check the OTP service logs."
+                "OTP sent successfully. Please check your email."
             );
 
             setForgotStep(2);
 
         } catch (error) {
+            console.error(
+                "SEND OTP ERROR:",
+                error
+            );
 
             setForgotError(
                 error.message ||
@@ -237,66 +270,59 @@ function Login({ onLogin, onCreateAccount }) {
             );
 
         } finally {
-
             setForgotLoading(false);
-
         }
     };
-
 
     // =====================================================
     // STEP 2 - VERIFY OTP
     // =====================================================
 
     const handleVerifyOtp = async (e) => {
-
         e.preventDefault();
 
         setForgotError("");
-
         setForgotMessage("");
 
-        if (!otp) {
-
+        if (!otp || otp.length !== 6) {
             setForgotError(
-                "Please enter the OTP."
+                "Please enter the 6-digit OTP."
             );
-
             return;
         }
 
         try {
-
             setForgotLoading(true);
 
             const response = await fetch(
                 `${API_BASE_URL}/api/auth/forgot-password/verify`,
                 {
                     method: "POST",
-
                     headers: {
-                        "Content-Type": "application/json",
+                        "Content-Type":
+                            "application/json",
+                        "Accept":
+                            "application/json",
                     },
-
                     body: JSON.stringify({
-                        email: forgotEmail,
+                        email: forgotEmail.trim().toLowerCase(),
                         otp: otp,
                     }),
                 }
             );
 
-            const data = await response.json();
+            const data =
+                await readApiResponse(response);
 
             if (!response.ok) {
-
                 throw new Error(
                     data.message ||
+                    data.error ||
                     "Invalid or expired OTP."
                 );
             }
 
             if (!data.sessionToken) {
-
                 throw new Error(
                     "Reset session was not created."
                 );
@@ -313,6 +339,10 @@ function Login({ onLogin, onCreateAccount }) {
             setForgotStep(3);
 
         } catch (error) {
+            console.error(
+                "VERIFY OTP ERROR:",
+                error
+            );
 
             setForgotError(
                 error.message ||
@@ -320,79 +350,81 @@ function Login({ onLogin, onCreateAccount }) {
             );
 
         } finally {
-
             setForgotLoading(false);
-
         }
     };
-
 
     // =====================================================
     // STEP 3 - RESET PASSWORD
     // =====================================================
 
     const handleResetPassword = async (e) => {
-
         e.preventDefault();
 
         setForgotError("");
-
         setForgotMessage("");
 
         if (!newPassword || !confirmPassword) {
-
             setForgotError(
                 "Please enter and confirm your new password."
             );
-
             return;
         }
 
         if (newPassword.length < 6) {
-
             setForgotError(
                 "Password must be at least 6 characters."
             );
-
             return;
         }
 
         if (newPassword !== confirmPassword) {
-
             setForgotError(
                 "Passwords do not match."
             );
+            return;
+        }
 
+        if (!sessionToken) {
+            setForgotError(
+                "Your reset session has expired. Please request a new OTP."
+            );
             return;
         }
 
         try {
-
             setForgotLoading(true);
 
             const response = await fetch(
                 `${API_BASE_URL}/api/auth/forgot-password/reset`,
                 {
                     method: "POST",
-
                     headers: {
-                        "Content-Type": "application/json",
+                        "Content-Type":
+                            "application/json",
+                        "Accept":
+                            "application/json",
                     },
-
                     body: JSON.stringify({
-                        email: forgotEmail,
-                        sessionToken: sessionToken,
-                        newPassword: newPassword,
+                        email:
+                            forgotEmail.trim().toLowerCase(),
+
+                        sessionToken:
+                            sessionToken,
+
+                        newPassword:
+                            newPassword,
                     }),
                 }
             );
 
-            const data = await response.json();
+            const data =
+                await readApiResponse(response);
 
             if (!response.ok) {
-
                 throw new Error(
                     data.message ||
+                    data.error ||
                     "Password reset failed."
                 );
             }
@@ -404,6 +436,10 @@ function Login({ onLogin, onCreateAccount }) {
             setForgotStep(4);
 
         } catch (error) {
+            console.error(
+                "RESET PASSWORD ERROR:",
+                error
+            );
 
             setForgotError(
                 error.message ||
@@ -411,24 +447,20 @@ function Login({ onLogin, onCreateAccount }) {
             );
 
         } finally {
-
             setForgotLoading(false);
-
         }
     };
-
 
     // =====================================================
     // RENDER
     // =====================================================
 
     return (
-
         <div className="login-page">
 
             <div className="login-card">
 
-                {/* Logo */}
+                {/* LOGO */}
 
                 <div className="login-logo">
                     I
@@ -442,38 +474,27 @@ function Login({ onLogin, onCreateAccount }) {
                     Sign in to continue to your investment platform
                 </p>
 
-
-                {/* Google Login */}
+                {/* GOOGLE LOGIN */}
 
                 <button
                     type="button"
                     className="google-login-btn"
                     onClick={handleGoogleLogin}
                 >
-
                     <span className="google-icon">
                         G
                     </span>
 
                     Continue with Google
-
                 </button>
 
-
                 <div className="login-divider">
-
-                    <span>
-                        OR
-                    </span>
-
+                    <span>OR</span>
                 </div>
 
-
-                {/* Login Form */}
+                {/* NORMAL LOGIN */}
 
                 <form onSubmit={handleLogin}>
-
-                    {/* Email */}
 
                     <div className="login-field">
 
@@ -486,14 +507,13 @@ function Login({ onLogin, onCreateAccount }) {
                             placeholder="Enter your email"
                             value={email}
                             onChange={(e) =>
-                                setEmail(e.target.value)
+                                setEmail(
+                                    e.target.value
+                                )
                             }
                         />
 
                     </div>
-
-
-                    {/* Password */}
 
                     <div className="login-field">
 
@@ -506,66 +526,52 @@ function Login({ onLogin, onCreateAccount }) {
                             placeholder="Enter your password"
                             value={password}
                             onChange={(e) =>
-                                setPassword(e.target.value)
+                                setPassword(
+                                    e.target.value
+                                )
                             }
                         />
 
                     </div>
 
-
-                    {/* Error */}
-
                     {error && (
-
                         <div className="login-error">
                             {error}
                         </div>
-
                     )}
-
 
                     <div className="login-options">
 
                         <label>
-
                             <input
                                 type="checkbox"
                             />
 
                             Remember me
-
                         </label>
-
 
                         <a
                             href="#forgot-password"
-                            onClick={openForgotPassword}
+                            onClick={
+                                openForgotPassword
+                            }
                         >
                             Forgot password?
                         </a>
 
                     </div>
 
-
-                    {/* Login Button */}
-
                     <button
                         type="submit"
                         className="login-btn"
                         disabled={loading}
                     >
-
                         {loading
                             ? "Signing In..."
-                            : "Sign In"
-                        }
-
+                            : "Sign In"}
                     </button>
 
                 </form>
-
-
-                {/* Create Account */}
 
                 <p className="signup-text">
 
@@ -583,15 +589,12 @@ function Login({ onLogin, onCreateAccount }) {
 
                         }}
                     >
-
                         Create an account
-
                     </a>
 
                 </p>
 
             </div>
-
 
             {/* =================================================
                 FORGOT PASSWORD MODAL
@@ -611,23 +614,23 @@ function Login({ onLogin, onCreateAccount }) {
                         }
                     >
 
-                        {/* Close */}
-
                         <button
                             type="button"
                             className="forgot-close"
-                            onClick={closeForgotPassword}
+                            onClick={
+                                closeForgotPassword
+                            }
                         >
                             ×
                         </button>
 
-
-                        {/* STEP 1 */}
+                        {/* =========================
+                            STEP 1
+                        ========================= */}
 
                         {forgotStep === 1 && (
 
                             <>
-
                                 <div className="forgot-icon">
                                     🔐
                                 </div>
@@ -637,13 +640,13 @@ function Login({ onLogin, onCreateAccount }) {
                                 </h2>
 
                                 <p className="forgot-description">
-                                    Enter your registered email and
-                                    we'll send you an OTP.
+                                    Enter your registered email and we'll send you an OTP.
                                 </p>
 
-
                                 <form
-                                    onSubmit={handleSendOtp}
+                                    onSubmit={
+                                        handleSendOtp
+                                    }
                                 >
 
                                     <div className="login-field">
@@ -655,7 +658,9 @@ function Login({ onLogin, onCreateAccount }) {
                                         <input
                                             type="email"
                                             placeholder="Enter your registered email"
-                                            value={forgotEmail}
+                                            value={
+                                                forgotEmail
+                                            }
                                             onChange={(e) =>
                                                 setForgotEmail(
                                                     e.target.value
@@ -666,51 +671,41 @@ function Login({ onLogin, onCreateAccount }) {
 
                                     </div>
 
-
                                     {forgotError && (
-
                                         <div className="login-error">
                                             {forgotError}
                                         </div>
-
                                     )}
 
-
                                     {forgotMessage && (
-
                                         <div className="forgot-success">
                                             {forgotMessage}
                                         </div>
-
                                     )}
-
 
                                     <button
                                         type="submit"
                                         className="login-btn"
-                                        disabled={forgotLoading}
+                                        disabled={
+                                            forgotLoading
+                                        }
                                     >
-
                                         {forgotLoading
                                             ? "Sending OTP..."
-                                            : "Send OTP"
-                                        }
-
+                                            : "Send OTP"}
                                     </button>
 
                                 </form>
-
                             </>
-
                         )}
 
-
-                        {/* STEP 2 */}
+                        {/* =========================
+                            STEP 2
+                        ========================= */}
 
                         {forgotStep === 2 && (
 
                             <>
-
                                 <div className="forgot-icon">
                                     ✉️
                                 </div>
@@ -720,20 +715,17 @@ function Login({ onLogin, onCreateAccount }) {
                                 </h2>
 
                                 <p className="forgot-description">
-
-                                    We generated a 6-digit OTP
-                                    for:
-
+                                    We sent a 6-digit OTP to:
                                     <strong>
                                         {" "}
                                         {forgotEmail}
                                     </strong>
-
                                 </p>
 
-
                                 <form
-                                    onSubmit={handleVerifyOtp}
+                                    onSubmit={
+                                        handleVerifyOtp
+                                    }
                                 >
 
                                     <div className="login-field">
@@ -750,11 +742,10 @@ function Login({ onLogin, onCreateAccount }) {
                                             value={otp}
                                             onChange={(e) =>
                                                 setOtp(
-                                                    e.target.value
-                                                        .replace(
-                                                            /\D/g,
-                                                            ""
-                                                        )
+                                                    e.target.value.replace(
+                                                        /\D/g,
+                                                        ""
+                                                    )
                                                 )
                                             }
                                             autoFocus
@@ -762,62 +753,54 @@ function Login({ onLogin, onCreateAccount }) {
 
                                     </div>
 
-
                                     {forgotError && (
-
                                         <div className="login-error">
                                             {forgotError}
                                         </div>
-
                                     )}
 
-
                                     {forgotMessage && (
-
                                         <div className="forgot-success">
                                             {forgotMessage}
                                         </div>
-
                                     )}
-
 
                                     <button
                                         type="submit"
                                         className="login-btn"
-                                        disabled={forgotLoading}
+                                        disabled={
+                                            forgotLoading
+                                        }
                                     >
-
                                         {forgotLoading
                                             ? "Verifying..."
-                                            : "Verify OTP"
-                                        }
-
+                                            : "Verify OTP"}
                                     </button>
-
 
                                     <button
                                         type="button"
                                         className="forgot-secondary-btn"
-                                        onClick={() =>
-                                            setForgotStep(1)
-                                        }
+                                        onClick={() => {
+                                            setForgotStep(1);
+                                            setForgotError("");
+                                            setForgotMessage("");
+                                            setOtp("");
+                                        }}
                                     >
                                         Change email
                                     </button>
 
                                 </form>
-
                             </>
-
                         )}
 
-
-                        {/* STEP 3 */}
+                        {/* =========================
+                            STEP 3
+                        ========================= */}
 
                         {forgotStep === 3 && (
 
                             <>
-
                                 <div className="forgot-icon">
                                     🔑
                                 </div>
@@ -827,13 +810,13 @@ function Login({ onLogin, onCreateAccount }) {
                                 </h2>
 
                                 <p className="forgot-description">
-                                    Choose a new password for your
-                                    Investra account.
+                                    Choose a new password for your Investra account.
                                 </p>
 
-
                                 <form
-                                    onSubmit={handleResetPassword}
+                                    onSubmit={
+                                        handleResetPassword
+                                    }
                                 >
 
                                     <div className="login-field">
@@ -845,7 +828,9 @@ function Login({ onLogin, onCreateAccount }) {
                                         <input
                                             type="password"
                                             placeholder="Enter new password"
-                                            value={newPassword}
+                                            value={
+                                                newPassword
+                                            }
                                             onChange={(e) =>
                                                 setNewPassword(
                                                     e.target.value
@@ -856,7 +841,6 @@ function Login({ onLogin, onCreateAccount }) {
 
                                     </div>
 
-
                                     <div className="login-field">
 
                                         <label>
@@ -866,7 +850,9 @@ function Login({ onLogin, onCreateAccount }) {
                                         <input
                                             type="password"
                                             placeholder="Confirm new password"
-                                            value={confirmPassword}
+                                            value={
+                                                confirmPassword
+                                            }
                                             onChange={(e) =>
                                                 setConfirmPassword(
                                                     e.target.value
@@ -876,46 +862,37 @@ function Login({ onLogin, onCreateAccount }) {
 
                                     </div>
 
-
                                     {forgotError && (
-
                                         <div className="login-error">
                                             {forgotError}
                                         </div>
-
                                     )}
 
-
                                     {forgotMessage && (
-
                                         <div className="forgot-success">
                                             {forgotMessage}
                                         </div>
-
                                     )}
-
 
                                     <button
                                         type="submit"
                                         className="login-btn"
-                                        disabled={forgotLoading}
+                                        disabled={
+                                            forgotLoading
+                                        }
                                     >
-
                                         {forgotLoading
                                             ? "Resetting..."
-                                            : "Reset Password"
-                                        }
-
+                                            : "Reset Password"}
                                     </button>
 
                                 </form>
-
                             </>
-
                         )}
 
-
-                        {/* STEP 4 */}
+                        {/* =========================
+                            STEP 4
+                        ========================= */}
 
                         {forgotStep === 4 && (
 
@@ -930,30 +907,28 @@ function Login({ onLogin, onCreateAccount }) {
                                 </h2>
 
                                 <p className="forgot-description">
-                                    Your password has been changed
-                                    successfully.
+                                    Your password has been changed successfully.
                                 </p>
 
                                 <button
                                     type="button"
                                     className="login-btn"
-                                    onClick={closeForgotPassword}
+                                    onClick={
+                                        closeForgotPassword
+                                    }
                                 >
                                     Back to Sign In
                                 </button>
 
                             </div>
-
                         )}
 
                     </div>
 
                 </div>
-
             )}
 
         </div>
-
     );
 }
 
