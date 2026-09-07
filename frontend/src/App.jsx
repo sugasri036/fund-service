@@ -81,7 +81,28 @@ function getInitials(name = "") {
     .slice(0, 2)
     .toUpperCase();
 }
+function formatIndianDateTime(value) {
+  if (!value) {
+    return "—";
+  }
 
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+}
 /* =====================================================
    RAZORPAY LOADER
 ===================================================== */
@@ -1883,17 +1904,7 @@ export default function App() {
     }
 
     function formatOrderDate(value) {
-      if (!value) {
-        return "—";
-      }
-
-      const date = new Date(value);
-
-      if (Number.isNaN(date.getTime())) {
-        return String(value);
-      }
-
-      return date.toLocaleString("en-IN");
+      return formatIndianDateTime(value);
     }
 
     function getInvestmentName(order) {
@@ -2154,7 +2165,16 @@ export default function App() {
 
       return Number.isNaN(date.getTime())
         ? String(value)
-        : date.toLocaleString("en-IN");
+        date.toLocaleString("en-IN", {
+  timeZone: "Asia/Kolkata",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: true,
+})
     };
 
     const status = String(order.status || "PENDING").toUpperCase();
@@ -2551,9 +2571,16 @@ export default function App() {
                           <span>
                             Completed:{" "}
                             {order.completedAt
-                              ? new Date(order.completedAt).toLocaleString(
-                                  "en-IN",
-                                )
+                              ? new Date(order.completedAt).toLocaleString("en-IN", {
+  timeZone: "Asia/Kolkata",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: true,
+})
                               : "—"}
                           </span>
                         </div>
