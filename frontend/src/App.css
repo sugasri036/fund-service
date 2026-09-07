@@ -5175,3 +5175,41 @@ button {
   background: #174875;
   color: #8fd0ff;
 }
+/* =========================================
+   PORTFOLIO PROFIT / LOSS
+========================================= */
+
+.portfolio-profit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  margin-top: 4px;
+  border-top: 1px solid rgba(120, 140, 160, 0.16);
+  border-bottom: 1px solid rgba(120, 140, 160, 0.16);
+}
+
+.portfolio-profit-row span {
+  font-size: 14px;
+  color: #718096;
+}
+
+.portfolio-profit-row strong {
+  font-size: 15px;
+}
+
+.positive {
+  color: #16865b;
+}
+
+.negative {
+  color: #c94b4b;
+}
+
+.portfolio-summary-card small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #718096;
+}

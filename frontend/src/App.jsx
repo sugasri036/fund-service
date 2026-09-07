@@ -2343,231 +2343,579 @@ export default function App() {
   ===================================================== */
 
   function PortfolioPage() {
-    const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [latestFunds, setLatestFunds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-    const [loading, setLoading] = useState(true);
-
-    const [error, setError] = useState("");
-
-    useEffect(() => {
-      if (currentUser?.id) {
-        loadPortfolio();
-      }
-    }, [currentUser?.id]);
-
-    async function loadPortfolio() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/orders/user/${encodeURIComponent(
-            String(currentUser?.id),
-          )}`,
-        );
-
-        const text = await response.text();
-
-        let data = {};
-
-        try {
-          data = text ? JSON.parse(text) : {};
-        } catch {
-          data = {};
-        }
-
-        if (!response.ok) {
-          throw new Error(
-            data.message || data.error || text || "Unable to load portfolio.",
-          );
-        }
-
-        const orderList = Array.isArray(data) ? data : data.content || [];
-
-        const completedOrders = orderList.filter(
-          (order) => String(order.status || "").toUpperCase() === "COMPLETED",
-        );
-
-        setOrders(completedOrders);
-      } catch (error) {
-        console.error("Failed to load portfolio:", error);
-
-        setError(error.message || "Unable to load portfolio.");
-      } finally {
-        setLoading(false);
-      }
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setLoading(false);
+      return;
     }
 
-    const totalInvested = orders.reduce(
-      (total, order) => total + Number(order.amount || 0),
-      0,
-    );
+    loadPortfolio();
 
-    const totalUnits = orders.reduce(
-      (total, order) => total + Number(order.units || 0),
-      0,
-    );
+    // Refresh portfolio values every 5 minutes
+    const interval = setInterval(() => {
+      loadPortfolio();
+    }, 5 * 60 * 1000);
 
-    const currentValue = orders.reduce(
-      (total, order) =>
-        total + Number(order.units || 0) * Number(order.nav || 0),
-      0,
-    );
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
 
-    return (
-      <main className="portfolio-page">
-        <div className="portfolio-container">
-          <div className="portfolio-page-heading">
-            <div>
-              <div className="performance-label">INVESTMENTS</div>
+  async function loadPortfolio() {
+    setLoading(true);
+    setError("");
 
-              <h1>My Portfolio</h1>
+    try {
+      /*
+       * 1. Fetch completed orders
+       */
+      const ordersResponse = await fetch(
+        `${API_BASE_URL}/api/orders/user/${encodeURIComponent(
+          String(currentUser?.id),
+        )}`,
+      );
 
-              <p>View your completed investments and holdings.</p>
+      const ordersText = await ordersResponse.text();
+
+      let ordersData = {};
+
+      try {
+        ordersData = ordersText
+          ? JSON.parse(ordersText)
+          : {};
+      } catch {
+        ordersData = {};
+      }
+
+      if (!ordersResponse.ok) {
+        throw new Error(
+          ordersData.message ||
+            ordersData.error ||
+            ordersText ||
+            "Unable to load portfolio.",
+        );
+      }
+
+      const orderList = Array.isArray(ordersData)
+        ? ordersData
+        : ordersData.content || [];
+
+      const completedOrders = orderList.filter(
+        (order) =>
+          String(order.status || "").toUpperCase() ===
+          "COMPLETED",
+      );
+
+      /*
+       * 2. Fetch latest fund data
+       *
+       * The Fund Service provides the latest NAV
+       * for each fund.
+       */
+      const fundsResponse = await fetch(
+        `${API_BASE_URL}/api/funds?page=0&size=100`,
+      );
+
+      let fundsData = {};
+
+      if (fundsResponse.ok) {
+        const fundsText = await fundsResponse.text();
+
+        try {
+          fundsData = fundsText
+            ? JSON.parse(fundsText)
+            : {};
+        } catch {
+          fundsData = {};
+        }
+      }
+
+      const fundList = Array.isArray(fundsData)
+        ? fundsData
+        : fundsData.content ||
+          fundsData.funds ||
+          [];
+
+      setLatestFunds(fundList);
+
+      /*
+       * 3. Match each completed order with
+       *    its fund's latest NAV.
+       */
+      const updatedOrders = completedOrders.map(
+        (order) => {
+          const matchingFund = fundList.find(
+            (fund) =>
+              String(fund.id) ===
+              String(order.fundId),
+          );
+
+          const latestNav = Number(
+            matchingFund?.nav ??
+              order.nav ??
+              0,
+          );
+
+          const units = Number(
+            order.units || 0,
+          );
+
+          const invested = Number(
+            order.amount || 0,
+          );
+
+          const currentValue =
+            units * latestNav;
+
+          const profitLoss =
+            currentValue - invested;
+
+          return {
+            ...order,
+            currentNav: latestNav,
+            currentValue,
+            profitLoss,
+          };
+        },
+      );
+
+      setOrders(updatedOrders);
+    } catch (error) {
+      console.error(
+        "Failed to load portfolio:",
+        error,
+      );
+
+      setError(
+        error.message ||
+          "Unable to load portfolio.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /*
+   * Total amount originally invested
+   */
+  const totalInvested = orders.reduce(
+    (total, order) =>
+      total + Number(order.amount || 0),
+    0,
+  );
+
+  /*
+   * Total units owned
+   */
+  const totalUnits = orders.reduce(
+    (total, order) =>
+      total + Number(order.units || 0),
+    0,
+  );
+
+  /*
+   * Current portfolio value using
+   * the latest NAV.
+   */
+  const currentValue = orders.reduce(
+    (total, order) =>
+      total +
+      Number(order.currentValue || 0),
+    0,
+  );
+
+  /*
+   * Total unrealized profit/loss
+   */
+  const totalProfitLoss =
+    currentValue - totalInvested;
+
+  /*
+   * Portfolio return percentage
+   */
+  const totalReturnPercentage =
+    totalInvested > 0
+      ? (totalProfitLoss / totalInvested) *
+        100
+      : 0;
+
+  return (
+    <main className="portfolio-page">
+      <div className="portfolio-container">
+
+        <div className="portfolio-page-heading">
+          <div>
+            <div className="performance-label">
+              INVESTMENTS
             </div>
+
+            <h1>My Portfolio</h1>
+
+            <p>
+              View your completed investments
+              and holdings.
+            </p>
           </div>
+        </div>
 
-          {loading && (
-            <div className="page-loading">
-              <div className="loading-spinner" />
+        {loading && (
+          <div className="page-loading">
+            <div className="loading-spinner" />
 
-              <span>Loading portfolio...</span>
+            <span>
+              Loading portfolio...
+            </span>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="empty-state">
+            <div className="empty-icon">
+              !
             </div>
-          )}
 
-          {!loading && error && (
+            <h3>
+              Unable to load portfolio
+            </h3>
+
+            <p>{error}</p>
+
+            <button
+              className="payment-retry-button"
+              onClick={loadPortfolio}
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {!loading &&
+          !error &&
+          orders.length === 0 && (
             <div className="empty-state">
-              <div className="empty-icon">!</div>
+              <div className="empty-icon">
+                ◈
+              </div>
 
-              <h3>Unable to load portfolio</h3>
+              <h3>
+                Your portfolio is empty
+              </h3>
 
-              <p>{error}</p>
-
-              <button className="payment-retry-button" onClick={loadPortfolio}>
-                Try Again
-              </button>
+              <p>
+                Completed investments will
+                appear here.
+              </p>
             </div>
           )}
 
-          {!loading && !error && orders.length === 0 && (
-            <div className="empty-state">
-              <div className="empty-icon">◈</div>
-
-              <h3>Your portfolio is empty</h3>
-
-              <p>Completed investments will appear here.</p>
-            </div>
-          )}
-
-          {!loading && !error && orders.length > 0 && (
+        {!loading &&
+          !error &&
+          orders.length > 0 && (
             <>
+              {/* ================================
+                  PORTFOLIO SUMMARY
+              ================================= */}
+
               <section className="portfolio-summary-grid">
-                <div className="portfolio-summary-card">
-                  <span>Total Invested</span>
 
-                  <strong>{formatCurrency(totalInvested)}</strong>
+                <div className="portfolio-summary-card">
+                  <span>
+                    Total Invested
+                  </span>
+
+                  <strong>
+                    {formatCurrency(
+                      totalInvested,
+                    )}
+                  </strong>
                 </div>
 
                 <div className="portfolio-summary-card">
-                  <span>Current Value</span>
+                  <span>
+                    Current Value
+                  </span>
 
-                  <strong>{formatCurrency(currentValue)}</strong>
+                  <strong>
+                    {formatCurrency(
+                      currentValue,
+                    )}
+                  </strong>
                 </div>
 
                 <div className="portfolio-summary-card">
-                  <span>Total Units</span>
+                  <span>
+                    Total Units
+                  </span>
 
-                  <strong>{totalUnits.toFixed(4)}</strong>
+                  <strong>
+                    {totalUnits.toFixed(4)}
+                  </strong>
                 </div>
 
                 <div className="portfolio-summary-card">
-                  <span>Investments</span>
+                  <span>
+                    Profit / Loss
+                  </span>
 
-                  <strong>{orders.length}</strong>
+                  <strong
+                    className={
+                      totalProfitLoss >= 0
+                        ? "positive"
+                        : "negative"
+                    }
+                  >
+                    {totalProfitLoss >= 0
+                      ? "+"
+                      : ""}
+                    {formatCurrency(
+                      totalProfitLoss,
+                    )}
+                  </strong>
+
+                  <small>
+                    {totalReturnPercentage >= 0
+                      ? "+"
+                      : ""}
+                    {totalReturnPercentage.toFixed(
+                      2,
+                    )}
+                    %
+                  </small>
                 </div>
               </section>
 
-              <section className="portfolio-holdings-section">
-                <div className="performance-label">HOLDINGS</div>
+              {/* ================================
+                  HOLDINGS
+              ================================= */}
 
-                <h2>Your Investments</h2>
+              <section className="portfolio-holdings-section">
+
+                <div className="performance-label">
+                  HOLDINGS
+                </div>
+
+                <h2>
+                  Your Investments
+                </h2>
 
                 <div className="portfolio-holdings-list">
+
                   {orders.map((order) => {
-                    const invested = Number(order.amount || 0);
+                    const invested =
+                      Number(
+                        order.amount || 0,
+                      );
 
-                    const units = Number(order.units || 0);
+                    const units =
+                      Number(
+                        order.units || 0,
+                      );
 
-                    const nav = Number(order.nav || 0);
+                    /*
+                     * IMPORTANT:
+                     *
+                     * This is now the LATEST NAV
+                     * fetched from Fund Service.
+                     */
+                    const currentNav =
+                      Number(
+                        order.currentNav || 0,
+                      );
 
-                    const value = units * nav;
+                    /*
+                     * Current market value
+                     */
+                    const value =
+                      units * currentNav;
+
+                    /*
+                     * Unrealized profit/loss
+                     */
+                    const profitLoss =
+                      value - invested;
+
+                    /*
+                     * Percentage return
+                     */
+                    const returnPercentage =
+                      invested > 0
+                        ? (profitLoss /
+                            invested) *
+                          100
+                        : 0;
 
                     return (
                       <article
                         className="portfolio-holding-card"
-                        key={order.id || order.orderId}
+                        key={
+                          order.id ||
+                          order.orderId
+                        }
                       >
+
                         <div className="portfolio-holding-header">
+
                           <div>
                             <h3>
-                              {order.fundName || order.fundId || "Investment"}
+                              {order.fundName ||
+                                order.fundId ||
+                                "Investment"}
                             </h3>
 
-                            <p>Fund ID: {order.fundId || "—"}</p>
+                            <p>
+                              Fund ID:{" "}
+                              {order.fundId ||
+                                "—"}
+                            </p>
                           </div>
 
-                          <span className="order-status paid">COMPLETED</span>
+                          <span className="order-status paid">
+                            COMPLETED
+                          </span>
+
                         </div>
 
                         <div className="portfolio-holding-details">
-                          <div>
-                            <span>Invested</span>
 
-                            <strong>{formatCurrency(invested)}</strong>
+                          <div>
+                            <span>
+                              Invested
+                            </span>
+
+                            <strong>
+                              {formatCurrency(
+                                invested,
+                              )}
+                            </strong>
                           </div>
 
                           <div>
-                            <span>Units</span>
+                            <span>
+                              Units
+                            </span>
 
-                            <strong>{units.toFixed(4)}</strong>
+                            <strong>
+                              {units.toFixed(
+                                4,
+                              )}
+                            </strong>
                           </div>
 
                           <div>
-                            <span>NAV</span>
+                            <span>
+                              Current NAV
+                            </span>
 
-                            <strong>{formatCurrency(nav)}</strong>
+                            <strong>
+                              {formatCurrency(
+                                currentNav,
+                              )}
+                            </strong>
                           </div>
 
                           <div>
-                            <span>Current Value</span>
+                            <span>
+                              Current Value
+                            </span>
 
-                            <strong>{formatCurrency(value)}</strong>
+                            <strong>
+                              {formatCurrency(
+                                value,
+                              )}
+                            </strong>
                           </div>
+
+                        </div>
+
+                        {/* =========================
+                            PROFIT / LOSS
+                        ========================== */}
+
+                        <div
+                          className="portfolio-profit-row"
+                        >
+                          <span>
+                            Profit / Loss
+                          </span>
+
+                          <strong
+                            className={
+                              profitLoss >= 0
+                                ? "positive"
+                                : "negative"
+                            }
+                          >
+                            {profitLoss >= 0
+                              ? "+"
+                              : ""}
+                            {formatCurrency(
+                              profitLoss,
+                            )}
+
+                            {" ("}
+
+                            {returnPercentage >=
+                            0
+                              ? "+"
+                              : ""}
+
+                            {returnPercentage.toFixed(
+                              2,
+                            )}
+                            %)
+                          </strong>
                         </div>
 
                         <div className="portfolio-holding-footer">
-                          <span>Order ID: {order.orderId || "—"}</span>
+
+                          <span>
+                            Order ID:{" "}
+                            {order.orderId ||
+                              "—"}
+                          </span>
 
                           <span>
                             Completed:{" "}
                             {order.completedAt
-                              ? new Date(order.completedAt).toLocaleString(
+                              ? new Date(
+                                  order.completedAt,
+                                ).toLocaleString(
                                   "en-IN",
+                                  {
+                                    timeZone:
+                                      "Asia/Kolkata",
+                                    day: "2-digit",
+                                    month:
+                                      "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute:
+                                      "2-digit",
+                                    second:
+                                      "2-digit",
+                                    hour12: true,
+                                  },
                                 )
                               : "—"}
                           </span>
+
                         </div>
+
                       </article>
                     );
                   })}
+
                 </div>
               </section>
             </>
           )}
-        </div>
-      </main>
-    );
-  }
+      </div>
+    </main>
+  );
+}
 
   /* =====================================================
      PROFILE
