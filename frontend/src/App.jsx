@@ -82,6 +82,20 @@ function getInitials(name = "") {
     .toUpperCase();
 }
 
+function parseBackendDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const text = String(value);
+
+  // Backend currently sends LocalDateTime without timezone.
+  // Render runs in UTC, so treat timezone-less timestamps as UTC.
+  const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(text);
+
+  return new Date(hasTimezone ? text : `${text}Z`);
+}
+
 /* =====================================================
    RAZORPAY LOADER
 ===================================================== */
@@ -1943,7 +1957,13 @@ export default function App() {
         return "—";
       }
 
-      return new Date(dateValue).toLocaleString("en-IN", {
+      const date = parseBackendDate(dateValue);
+
+      if (!date || Number.isNaN(date.getTime())) {
+        return String(dateValue);
+      }
+
+      return date.toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
         day: "2-digit",
         month: "2-digit",
@@ -1954,7 +1974,6 @@ export default function App() {
         hour12: true,
       });
     }
-
     function getInvestmentName(order) {
       return order.fundName || order.fund?.name || order.fundId || "Investment";
     }
@@ -2209,20 +2228,22 @@ export default function App() {
         return "—";
       }
 
-      const date = new Date(value);
+      const date = parseBackendDate(value);
 
-      return Number.isNaN(date.getTime())
-        ? String(value)
-        : date.toLocaleString("en-IN", {
-            timeZone: "Asia/Kolkata",
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: true,
-          });
+      if (!date || Number.isNaN(date.getTime())) {
+        return String(value);
+      }
+
+      return date.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
     };
 
     const status = String(order.status || "PENDING").toUpperCase();
@@ -3423,19 +3444,18 @@ export default function App() {
                           <span>
                             Completed:{" "}
                             {order.completedAt
-                              ? new Date(order.completedAt).toLocaleString(
-                                  "en-IN",
-                                  {
-                                    timeZone: "Asia/Kolkata",
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    second: "2-digit",
-                                    hour12: true,
-                                  },
-                                )
+                              ? parseBackendDate(
+                                  order.completedAt,
+                                ).toLocaleString("en-IN", {
+                                  timeZone: "Asia/Kolkata",
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                  hour12: true,
+                                })
                               : "—"}
                           </span>
                         </div>
