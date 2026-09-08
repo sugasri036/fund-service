@@ -1938,22 +1938,22 @@ export default function App() {
       return order.status || "PENDING";
     }
 
-   function formatDate(dateValue) {
-  if (!dateValue) {
-    return "—";
-  }
+    function formatDate(dateValue) {
+      if (!dateValue) {
+        return "—";
+      }
 
-  return new Date(dateValue).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-}
+      return new Date(dateValue).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+    }
 
     function getInvestmentName(order) {
       return order.fundName || order.fund?.name || order.fundId || "Investment";
@@ -2104,7 +2104,7 @@ export default function App() {
                       <div className="order-detail">
                         <span>Created</span>
 
-                        <strong>{formatOrderDate(order.createdAt)}</strong>
+                        <strong>{formatDate(order.createdAt)}</strong>
                       </div>
                     </div>
 
@@ -2205,31 +2205,24 @@ export default function App() {
     }
 
     const formatDate = (value) => {
-  if (!value) {
-    return "—";
-  }
-
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime())
-    ? String(value)
-    : date.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      });
-};
+      if (!value) {
+        return "—";
+      }
 
       const date = new Date(value);
 
       return Number.isNaN(date.getTime())
         ? String(value)
-        : date.toLocaleString("en-IN");
+        : date.toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+          });
     };
 
     const status = String(order.status || "PENDING").toUpperCase();
