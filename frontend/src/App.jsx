@@ -1330,83 +1330,71 @@ export default function App() {
   ===================================================== */
 
   function PaymentPage() {
-  const fund = selectedFund;
+    const fund = selectedFund;
 
-  const [amount, setAmount] = useState("");
-  const [investmentHorizon, setInvestmentHorizon] =
-    useState("LONG_TERM");
-  const [paymentState, setPaymentState] = useState("idle");
-  const [paymentMessage, setPaymentMessage] = useState("");
+    const [amount, setAmount] = useState("");
+    const [investmentHorizon, setInvestmentHorizon] = useState("LONG_TERM");
+    const [paymentState, setPaymentState] = useState("idle");
+    const [paymentMessage, setPaymentMessage] = useState("");
 
-  if (!fund) {
-    return (
-      <PlaceholderPage
-        icon="!"
-        title="No investment selected"
-        text="Please select a fund before investing."
-      />
-    );
-  }
-
-  const numericAmount = Number(amount) || 0;
-
-  const minimumInvestment =
-    Number(fund.minimumInvestment) || 500;
-
-  const validAmount =
-    numericAmount >= minimumInvestment;
-
-  function handleAmountChange(event) {
-    const value = event.target.value;
-
-    if (value === "" || /^\d*\.?\d*$/.test(value)) {
-      setAmount(value);
-      setPaymentState("idle");
-      setPaymentMessage("");
-    }
-  }
-
-  async function handlePayment() {
-    if (!validAmount) {
-      setPaymentState("error");
-
-      setPaymentMessage(
-        `Minimum investment is ${formatCurrency(
-          minimumInvestment,
-        )}.`,
+    if (!fund) {
+      return (
+        <PlaceholderPage
+          icon="!"
+          title="No investment selected"
+          text="Please select a fund before investing."
+        />
       );
-
-      return;
     }
 
-    setPaymentState("loading");
-    setPaymentMessage("");
+    const numericAmount = Number(amount) || 0;
 
-    try {
-      const razorpayLoaded =
-        await loadRazorpay();
+    const minimumInvestment = Number(fund.minimumInvestment) || 500;
 
-      if (!razorpayLoaded || !window.Razorpay) {
-        throw new Error(
-          "Secure payment checkout could not be loaded.",
+    const validAmount = numericAmount >= minimumInvestment;
+
+    function handleAmountChange(event) {
+      const value = event.target.value;
+
+      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+        setAmount(value);
+        setPaymentState("idle");
+        setPaymentMessage("");
+      }
+    }
+
+    async function handlePayment() {
+      if (!validAmount) {
+        setPaymentState("error");
+
+        setPaymentMessage(
+          `Minimum investment is ${formatCurrency(minimumInvestment)}.`,
         );
+
+        return;
       }
 
-      const idempotencyKey =
-        "INVEST-" + crypto.randomUUID();
+      setPaymentState("loading");
+      setPaymentMessage("");
 
-      /* -------------------------------------------------
+      try {
+        const razorpayLoaded = await loadRazorpay();
+
+        if (!razorpayLoaded || !window.Razorpay) {
+          throw new Error("Secure payment checkout could not be loaded.");
+        }
+
+        const idempotencyKey = "INVEST-" + crypto.randomUUID();
+
+        /* -------------------------------------------------
          CREATE INTERNAL ORDER
       ------------------------------------------------- */
 
-      const orderResponse = await fetch(
-        `${API_BASE_URL}/api/orders`,
-        {
+        const orderResponse = await fetch(`${API_BASE_URL}/api/orders`, {
           method: "POST",
 
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
             Accept: "application/json",
           },
 
@@ -1415,563 +1403,403 @@ export default function App() {
             fundId: String(fund.id),
             fundName: fund.name,
             amount: numericAmount,
-            investmentHorizon:
-              investmentHorizon,
+            investmentHorizon: investmentHorizon,
             idempotencyKey,
           }),
-        },
-      );
+        });
 
-      const orderText =
-        await orderResponse.text();
+        const orderText = await orderResponse.text();
 
-      let orderData = {};
+        let orderData = {};
 
-      try {
-        orderData = orderText
-          ? JSON.parse(orderText)
-          : {};
-      } catch {
-        orderData = {
-          message: orderText,
-        };
-      }
+        try {
+          orderData = orderText ? JSON.parse(orderText) : {};
+        } catch {
+          orderData = {
+            message: orderText,
+          };
+        }
 
-      if (!orderResponse.ok) {
-        throw new Error(
-          orderData.message ||
-            orderData.error ||
-            "Order creation failed.",
-        );
-      }
+        if (!orderResponse.ok) {
+          throw new Error(
+            orderData.message || orderData.error || "Order creation failed.",
+          );
+        }
 
-      const internalOrderId =
-        orderData.orderId;
+        const internalOrderId = orderData.orderId;
 
-      const razorpayOrderId =
-        orderData.razorpayOrderId;
+        const razorpayOrderId = orderData.razorpayOrderId;
 
-      if (!internalOrderId) {
-        throw new Error(
-          "Order Service did not return an internal Order ID.",
-        );
-      }
+        if (!internalOrderId) {
+          throw new Error("Order Service did not return an internal Order ID.");
+        }
 
-      if (!razorpayOrderId) {
-        throw new Error(
-          "Order Service did not return a Razorpay Order ID.",
-        );
-      }
+        if (!razorpayOrderId) {
+          throw new Error("Order Service did not return a Razorpay Order ID.");
+        }
 
-      console.log(
-        "INTERNAL ORDER ID:",
-        internalOrderId,
-      );
+        console.log("INTERNAL ORDER ID:", internalOrderId);
 
-      console.log(
-        "RAZORPAY ORDER ID:",
-        razorpayOrderId,
-      );
+        console.log("RAZORPAY ORDER ID:", razorpayOrderId);
 
-      setPaymentState("opening");
+        setPaymentState("opening");
 
-      const options = {
-        key: "rzp_test_TQL7WW3J6KMWr0",
+        const options = {
+          key: "rzp_test_TQL7WW3J6KMWr0",
 
-        amount: Math.round(
-          numericAmount * 100,
-        ),
+          amount: Math.round(numericAmount * 100),
 
-        currency: "INR",
+          currency: "INR",
 
-        name: "Investra",
+          name: "Investra",
 
-        description: `Investment in ${fund.name}`,
+          description: `Investment in ${fund.name}`,
 
-        order_id: razorpayOrderId,
+          order_id: razorpayOrderId,
 
-        prefill: {
-          name: currentUser?.name || "",
-          email: currentUser?.email || "",
-        },
+          prefill: {
+            name: currentUser?.name || "",
+            email: currentUser?.email || "",
+          },
 
-        notes: {
-          userId: String(currentUser?.id),
-          fundId: String(fund.id),
-          fundName: fund.name,
-          orderId: internalOrderId,
-          investmentHorizon:
-            investmentHorizon,
-        },
+          notes: {
+            userId: String(currentUser?.id),
+            fundId: String(fund.id),
+            fundName: fund.name,
+            orderId: internalOrderId,
+            investmentHorizon: investmentHorizon,
+          },
 
-        theme: {
-          color: "#2878ce",
-        },
+          theme: {
+            color: "#2878ce",
+          },
 
-        handler: async function (
-          razorpayResponse,
-        ) {
-          try {
-            setPaymentState("verifying");
+          handler: async function (razorpayResponse) {
+            try {
+              setPaymentState("verifying");
 
-            setPaymentMessage(
-              "Payment completed. Verifying your transaction...",
-            );
+              setPaymentMessage(
+                "Payment completed. Verifying your transaction...",
+              );
 
-            const verifyResponse =
-              await fetch(
+              const verifyResponse = await fetch(
                 `${API_BASE_URL}/api/payments/verify`,
                 {
                   method: "POST",
 
                   headers: {
-                    "Content-Type":
-                      "application/json",
-                    Accept:
-                      "application/json",
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
                   },
 
                   body: JSON.stringify({
-                    razorpayOrderId:
-                      razorpayResponse.razorpay_order_id,
+                    razorpayOrderId: razorpayResponse.razorpay_order_id,
 
-                    razorpayPaymentId:
-                      razorpayResponse.razorpay_payment_id,
+                    razorpayPaymentId: razorpayResponse.razorpay_payment_id,
 
-                    razorpaySignature:
-                      razorpayResponse.razorpay_signature,
+                    razorpaySignature: razorpayResponse.razorpay_signature,
                   }),
                 },
               );
 
-            const verifyText =
-              await verifyResponse.text();
+              const verifyText = await verifyResponse.text();
 
-            let verifyData = {};
+              let verifyData = {};
 
-            try {
-              verifyData = verifyText
-                ? JSON.parse(verifyText)
-                : {};
-            } catch {
-              verifyData = {
-                message: verifyText,
-              };
-            }
+              try {
+                verifyData = verifyText ? JSON.parse(verifyText) : {};
+              } catch {
+                verifyData = {
+                  message: verifyText,
+                };
+              }
 
-            if (!verifyResponse.ok) {
-              throw new Error(
-                verifyData.message ||
-                  verifyData.error ||
-                  "Payment verification failed.",
+              if (!verifyResponse.ok) {
+                throw new Error(
+                  verifyData.message ||
+                    verifyData.error ||
+                    "Payment verification failed.",
+                );
+              }
+
+              setPaymentState("success");
+
+              setPaymentMessage(
+                `Your payment of ${formatCurrency(
+                  numericAmount,
+                )} was completed successfully.`,
+              );
+
+              setTimeout(() => {
+                setCurrentPage("orders");
+
+                setProfileOpen(false);
+
+                window.scrollTo({
+                  top: 0,
+                  behavior: "smooth",
+                });
+              }, 800);
+            } catch (error) {
+              console.error("Payment verification error:", error);
+
+              setPaymentState("error");
+
+              setPaymentMessage(
+                error.message || "Payment verification failed.",
               );
             }
-
-            setPaymentState("success");
-
-            setPaymentMessage(
-              `Your payment of ${formatCurrency(
-                numericAmount,
-              )} was completed successfully.`,
-            );
-
-            setTimeout(() => {
-              setCurrentPage("orders");
-
-              setProfileOpen(false);
-
-              window.scrollTo({
-                top: 0,
-                behavior: "smooth",
-              });
-            }, 800);
-          } catch (error) {
-            console.error(
-              "Payment verification error:",
-              error,
-            );
-
-            setPaymentState("error");
-
-            setPaymentMessage(
-              error.message ||
-                "Payment verification failed.",
-            );
-          }
-        },
-
-        modal: {
-          ondismiss: function () {
-            setPaymentState("idle");
-            setPaymentMessage("");
           },
-        },
-      };
 
-      const razorpay =
-        new window.Razorpay(options);
+          modal: {
+            ondismiss: function () {
+              setPaymentState("idle");
+              setPaymentMessage("");
+            },
+          },
+        };
 
-      razorpay.on(
-        "payment.failed",
-        function (response) {
-          console.error(
-            "Razorpay payment failed:",
-            response?.error,
-          );
+        const razorpay = new window.Razorpay(options);
+
+        razorpay.on("payment.failed", function (response) {
+          console.error("Razorpay payment failed:", response?.error);
 
           setPaymentState("error");
 
           setPaymentMessage(
-            response?.error?.description ||
-              "Payment could not be completed.",
+            response?.error?.description || "Payment could not be completed.",
           );
-        },
-      );
+        });
 
-      razorpay.open();
-    } catch (error) {
-      console.error(
-        "Payment error:",
-        error,
-      );
+        razorpay.open();
+      } catch (error) {
+        console.error("Payment error:", error);
 
-      setPaymentState("error");
+        setPaymentState("error");
 
-      setPaymentMessage(
-        error.message ||
-          "Payment could not be started.",
-      );
+        setPaymentMessage(error.message || "Payment could not be started.");
+      }
     }
-  }
 
-  return (
-    <main className="payment-page">
-      <div className="payment-container">
-
-        <button
-          className="back-button payment-back"
-          onClick={() => openFund(fund)}
-        >
-          ← Back to Fund Details
-        </button>
-
-        <div className="payment-intro">
-          Review your investment details before proceeding to payment.
-        </div>
-
-        <section className="selected-fund-section">
-
-          <div className="selected-fund-label">
-            SELECTED FUND
-          </div>
-
-          <div className="selected-fund-header">
-
-            <div className="large-fund-avatar">
-              {getInitials(fund.name)}
-            </div>
-
-            <div className="selected-fund-info">
-
-              <h1>{fund.name}</h1>
-
-              <p>
-                {fund.category} •{" "}
-                {fund.risk ||
-                  fund.riskLevel}
-              </p>
-
-            </div>
-
-          </div>
-
-          <div className="payment-fund-stats">
-
-            <div>
-              <span>Current NAV</span>
-
-              <strong>
-                {formatCurrency(fund.nav)}
-              </strong>
-            </div>
-
-            <div>
-              <span>Minimum Investment</span>
-
-              <strong>
-                {formatCurrency(
-                  minimumInvestment,
-                )}
-              </strong>
-            </div>
-
-            <div>
-              <span>1 Year Return</span>
-
-              <strong className="positive">
-                {Number(
-                  fund.oneYearReturn || 0,
-                ).toFixed(2)}
-                %
-              </strong>
-            </div>
-
-          </div>
-
-        </section>
-
-        <section className="investment-section">
-
-          <h2>Investment Amount</h2>
-
-          <p>
-            Enter the amount you would like to
-            invest in this fund.
-          </p>
-
-          <label className="amount-label">
-            Enter Amount (₹)
-          </label>
-
-          <div
-            className={`amount-input-wrapper ${
-              amount && !validAmount
-                ? "amount-invalid"
-                : ""
-            }`}
-          >
-            <span>₹</span>
-
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="Enter amount"
-              value={amount}
-              onChange={handleAmountChange}
-              disabled={[
-                "loading",
-                "opening",
-                "verifying",
-              ].includes(paymentState)}
-            />
-          </div>
-
-          {amount && !validAmount && (
-            <div className="amount-validation">
-              Minimum investment is{" "}
-              {formatCurrency(
-                minimumInvestment,
-              )}
-            </div>
-          )}
-
-          {/* =========================================
-              INVESTMENT HORIZON
-          ========================================== */}
-
-          <div className="investment-horizon-section">
-
-            <label className="amount-label">
-              Investment Horizon
-            </label>
-
-            <p>
-              Choose how you plan to hold this
-              investment.
-            </p>
-
-            <div className="investment-horizon-options">
-
-              <button
-                type="button"
-                className={`investment-horizon-option ${
-                  investmentHorizon ===
-                  "SHORT_TERM"
-                    ? "selected"
-                    : ""
-                }`}
-                onClick={() =>
-                  setInvestmentHorizon(
-                    "SHORT_TERM",
-                  )
-                }
-                disabled={[
-                  "loading",
-                  "opening",
-                  "verifying",
-                ].includes(paymentState)}
-              >
-                <strong>
-                  Short Term
-                </strong>
-
-                <span>
-                  For shorter investment goals
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className={`investment-horizon-option ${
-                  investmentHorizon ===
-                  "LONG_TERM"
-                    ? "selected"
-                    : ""
-                }`}
-                onClick={() =>
-                  setInvestmentHorizon(
-                    "LONG_TERM",
-                  )
-                }
-                disabled={[
-                  "loading",
-                  "opening",
-                  "verifying",
-                ].includes(paymentState)}
-              >
-                <strong>
-                  Long Term
-                </strong>
-
-                <span>
-                  For long-term wealth creation
-                </span>
-              </button>
-
-            </div>
-
-          </div>
-
-          <div className="investment-summary">
-
-            <div>
-              <span>
-                Investment Horizon:
-              </span>
-
-              <strong>
-                {investmentHorizon ===
-                "SHORT_TERM"
-                  ? "Short Term"
-                  : "Long Term"}
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                Minimum investment:
-              </span>
-
-              <strong>
-                {formatCurrency(
-                  minimumInvestment,
-                )}
-              </strong>
-            </div>
-
-            <div>
-              <span>
-                Total Investment:
-              </span>
-
-              <strong>
-                {formatCurrency(
-                  numericAmount,
-                )}
-              </strong>
-            </div>
-
-          </div>
-
+    return (
+      <main className="payment-page">
+        <div className="payment-container">
           <button
-            className="payment-proceed-button"
-            onClick={handlePayment}
-            disabled={
-              !validAmount ||
-              [
-                "loading",
-                "opening",
-                "verifying",
-              ].includes(paymentState)
-            }
+            className="back-button payment-back"
+            onClick={() => openFund(fund)}
           >
-            <span>
-              {paymentState === "loading"
-                ? "Creating Order..."
-                : paymentState === "opening"
-                  ? "Opening Payment..."
-                  : paymentState === "verifying"
-                    ? "Verifying Payment..."
-                    : paymentState === "success"
-                      ? "Payment Successful"
-                      : "Proceed to Payment"}
-            </span>
-
-            <span className="payment-arrow">
-              →
-            </span>
+            ← Back to Fund Details
           </button>
 
-          {paymentState !== "idle" && (
-            <div
-              className={`payment-message ${paymentState}`}
-            >
-              <div className="payment-message-icon">
-                {paymentState === "success"
-                  ? "✓"
-                  : paymentState === "error"
-                    ? "!"
-                    : "•"}
+          <div className="payment-intro">
+            Review your investment details before proceeding to payment.
+          </div>
+
+          <section className="selected-fund-section">
+            <div className="selected-fund-label">SELECTED FUND</div>
+
+            <div className="selected-fund-header">
+              <div className="large-fund-avatar">{getInitials(fund.name)}</div>
+
+              <div className="selected-fund-info">
+                <h1>{fund.name}</h1>
+
+                <p>
+                  {fund.category} • {fund.risk || fund.riskLevel}
+                </p>
+              </div>
+            </div>
+
+            <div className="payment-fund-stats">
+              <div>
+                <span>Current NAV</span>
+
+                <strong>{formatCurrency(fund.nav)}</strong>
               </div>
 
               <div>
+                <span>Minimum Investment</span>
 
-                <strong>
-                  {paymentState ===
-                  "success"
-                    ? "Payment Successful"
-                    : paymentState ===
-                        "error"
-                      ? "Payment couldn't be started"
-                      : paymentState ===
-                          "verifying"
-                        ? "Verifying Payment"
-                        : "Opening Secure Payment"}
+                <strong>{formatCurrency(minimumInvestment)}</strong>
+              </div>
+
+              <div>
+                <span>1 Year Return</span>
+
+                <strong className="positive">
+                  {Number(fund.oneYearReturn || 0).toFixed(2)}%
                 </strong>
-
-                <p>
-                  {paymentMessage ||
-                    "Creating your secure payment order..."}
-                </p>
-
-                {paymentState ===
-                  "error" && (
-                  <button
-                    className="payment-retry-button"
-                    onClick={() => {
-                      setPaymentState(
-                        "idle",
-                      );
-                      setPaymentMessage("");
-                    }}
-                  >
-                    Try Again
-                  </button>
-                )}
-
               </div>
             </div>
-          )}
+          </section>
 
-          <div className="secure-payment">
-            🔒 Secure payment
-          </div>
+          <section className="investment-section">
+            <h2>Investment Amount</h2>
 
-        </section>
-      </div>
-    </main>
-  );
-}
+            <p>Enter the amount you would like to invest in this fund.</p>
+
+            <label className="amount-label">Enter Amount (₹)</label>
+
+            <div
+              className={`amount-input-wrapper ${
+                amount && !validAmount ? "amount-invalid" : ""
+              }`}
+            >
+              <span>₹</span>
+
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="Enter amount"
+                value={amount}
+                onChange={handleAmountChange}
+                disabled={["loading", "opening", "verifying"].includes(
+                  paymentState,
+                )}
+              />
+            </div>
+
+            {amount && !validAmount && (
+              <div className="amount-validation">
+                Minimum investment is {formatCurrency(minimumInvestment)}
+              </div>
+            )}
+
+            {/* =========================================
+              INVESTMENT HORIZON
+          ========================================== */}
+
+            <div className="investment-horizon-section">
+              <label className="amount-label">Investment Horizon</label>
+
+              <p>Choose how you plan to hold this investment.</p>
+
+              <div className="investment-horizon-options">
+                <button
+                  type="button"
+                  className={`investment-horizon-option ${
+                    investmentHorizon === "SHORT_TERM" ? "selected" : ""
+                  }`}
+                  onClick={() => setInvestmentHorizon("SHORT_TERM")}
+                  disabled={["loading", "opening", "verifying"].includes(
+                    paymentState,
+                  )}
+                >
+                  <strong>Short Term</strong>
+
+                  <span>For shorter investment goals</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`investment-horizon-option ${
+                    investmentHorizon === "LONG_TERM" ? "selected" : ""
+                  }`}
+                  onClick={() => setInvestmentHorizon("LONG_TERM")}
+                  disabled={["loading", "opening", "verifying"].includes(
+                    paymentState,
+                  )}
+                >
+                  <strong>Long Term</strong>
+
+                  <span>For long-term wealth creation</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="investment-summary">
+              <div>
+                <span>Investment Horizon:</span>
+
+                <strong>
+                  {investmentHorizon === "SHORT_TERM"
+                    ? "Short Term"
+                    : "Long Term"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Minimum investment:</span>
+
+                <strong>{formatCurrency(minimumInvestment)}</strong>
+              </div>
+
+              <div>
+                <span>Total Investment:</span>
+
+                <strong>{formatCurrency(numericAmount)}</strong>
+              </div>
+            </div>
+
+            <button
+              className="payment-proceed-button"
+              onClick={handlePayment}
+              disabled={
+                !validAmount ||
+                ["loading", "opening", "verifying"].includes(paymentState)
+              }
+            >
+              <span>
+                {paymentState === "loading"
+                  ? "Creating Order..."
+                  : paymentState === "opening"
+                    ? "Opening Payment..."
+                    : paymentState === "verifying"
+                      ? "Verifying Payment..."
+                      : paymentState === "success"
+                        ? "Payment Successful"
+                        : "Proceed to Payment"}
+              </span>
+
+              <span className="payment-arrow">→</span>
+            </button>
+
+            {paymentState !== "idle" && (
+              <div className={`payment-message ${paymentState}`}>
+                <div className="payment-message-icon">
+                  {paymentState === "success"
+                    ? "✓"
+                    : paymentState === "error"
+                      ? "!"
+                      : "•"}
+                </div>
+
+                <div>
+                  <strong>
+                    {paymentState === "success"
+                      ? "Payment Successful"
+                      : paymentState === "error"
+                        ? "Payment couldn't be started"
+                        : paymentState === "verifying"
+                          ? "Verifying Payment"
+                          : "Opening Secure Payment"}
+                  </strong>
+
+                  <p>
+                    {paymentMessage || "Creating your secure payment order..."}
+                  </p>
+
+                  {paymentState === "error" && (
+                    <button
+                      className="payment-retry-button"
+                      onClick={() => {
+                        setPaymentState("idle");
+                        setPaymentMessage("");
+                      }}
+                    >
+                      Try Again
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="secure-payment">🔒 Secure payment</div>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   /* =====================================================
      MY ORDERS
@@ -2571,340 +2399,450 @@ export default function App() {
   ===================================================== */
 
   function PortfolioPage() {
-  const [orders, setOrders] = useState([]);
-  const [latestFunds, setLatestFunds] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+    const [orders, setOrders] = useState([]);
+    const [latestFunds, setLatestFunds] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [holdingSort, setHoldingSort] = useState("newest");
 
-  useEffect(() => {
-    if (!currentUser?.id) {
-      setLoading(false);
-      return;
-    }
+    const [performancePeriod, setPerformancePeriod] = useState("6M");
 
-    loadPortfolio();
+    const [performanceHistory, setPerformanceHistory] = useState([]);
 
-    const interval = setInterval(() => {
+    const [performanceLoading, setPerformanceLoading] = useState(false);
+
+    const [performanceHover, setPerformanceHover] = useState(null);
+
+    useEffect(() => {
+      if (!currentUser?.id) {
+        setLoading(false);
+        return;
+      }
+
       loadPortfolio();
-    }, 5 * 60 * 1000);
 
-    return () => clearInterval(interval);
-  }, [currentUser?.id]);
-
-  async function loadPortfolio() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const ordersResponse = await fetch(
-        `${API_BASE_URL}/api/orders/user/${encodeURIComponent(
-          String(currentUser?.id),
-        )}`,
+      const interval = setInterval(
+        () => {
+          loadPortfolio();
+        },
+        5 * 60 * 1000,
       );
 
-      const ordersText =
-        await ordersResponse.text();
+      return () => clearInterval(interval);
+    }, [currentUser?.id]);
 
-      let ordersData = {};
+    async function loadPortfolio() {
+      setLoading(true);
+      setError("");
 
-      try {
-        ordersData = ordersText
-          ? JSON.parse(ordersText)
-          : {};
-      } catch {
-        ordersData = {};
+      /* =====================================================
+   PORTFOLIO PERFORMANCE HISTORY
+===================================================== */
+
+      function getPerformanceDateRange(selectedPeriod) {
+        const endDate = new Date();
+        const startDate = new Date(endDate);
+
+        if (selectedPeriod === "1M") {
+          startDate.setMonth(startDate.getMonth() - 1);
+        } else if (selectedPeriod === "3M") {
+          startDate.setMonth(startDate.getMonth() - 3);
+        } else if (selectedPeriod === "6M") {
+          startDate.setMonth(startDate.getMonth() - 6);
+        } else {
+          startDate.setFullYear(startDate.getFullYear() - 1);
+        }
+
+        return {
+          startDate: startDate.toISOString().slice(0, 10),
+
+          endDate: endDate.toISOString().slice(0, 10),
+        };
       }
 
-      if (!ordersResponse.ok) {
-        throw new Error(
-          ordersData.message ||
-            ordersData.error ||
-            ordersText ||
-            "Unable to load portfolio.",
-        );
-      }
+      useEffect(() => {
+        if (!orders.length) {
+          setPerformanceHistory([]);
+          return;
+        }
 
-      const orderList = Array.isArray(
-        ordersData,
-      )
-        ? ordersData
-        : ordersData.content || [];
+        loadPerformanceHistory();
+      }, [orders, performancePeriod]);
 
-      const completedOrders =
-        orderList.filter(
-          (order) =>
-            String(
-              order.status || "",
-            ).toUpperCase() ===
-            "COMPLETED",
-        );
-
-      /* =========================================
-         GET LATEST FUND NAV
-      ========================================== */
-
-      const fundsResponse =
-        await fetch(
-          `${API_BASE_URL}/api/funds?page=0&size=100`,
-        );
-
-      let fundsData = {};
-
-      if (fundsResponse.ok) {
-        const fundsText =
-          await fundsResponse.text();
+      async function loadPerformanceHistory() {
+        setPerformanceLoading(true);
+        setPerformanceHover(null);
 
         try {
-          fundsData = fundsText
-            ? JSON.parse(fundsText)
-            : {};
-        } catch {
-          fundsData = {};
+          const { startDate, endDate } =
+            getPerformanceDateRange(performancePeriod);
+
+          const uniqueFundIds = [
+            ...new Set(orders.map((order) => String(order.fundId))),
+          ];
+
+          const historyResults = await Promise.all(
+            uniqueFundIds.map(async (fundId) => {
+              try {
+                const response = await fetch(
+                  `${API_BASE_URL}/api/funds/${fundId}/nav-history?startDate=${startDate}&endDate=${endDate}`,
+                );
+
+                if (!response.ok) {
+                  return {
+                    fundId,
+                    history: [],
+                  };
+                }
+
+                const data = await response.json();
+
+                const rawHistory = Array.isArray(data)
+                  ? data
+                  : data.content || data.navHistory || data.history || [];
+
+                const history = rawHistory
+                  .map((item) => ({
+                    date: item.navDate || item.date || item.nav_date,
+
+                    nav: Number(item.nav ?? item.value ?? item.NAV ?? 0),
+                  }))
+                  .filter((item) => item.date && Number.isFinite(item.nav))
+                  .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                return {
+                  fundId,
+                  history,
+                };
+              } catch (error) {
+                console.error(
+                  `Performance history error for fund ${fundId}:`,
+                  error,
+                );
+
+                return {
+                  fundId,
+                  history: [],
+                };
+              }
+            }),
+          );
+
+          const historyMap = new Map(
+            historyResults.map((item) => [item.fundId, item.history]),
+          );
+
+          const allDates = [
+            ...new Set(
+              historyResults.flatMap((item) =>
+                item.history.map((point) => point.date),
+              ),
+            ),
+          ].sort((a, b) => new Date(a) - new Date(b));
+
+          const getNavForDate = (history, targetDate) => {
+            if (!history?.length) {
+              return null;
+            }
+
+            let selected = null;
+
+            for (const point of history) {
+              if (new Date(point.date) <= new Date(targetDate)) {
+                selected = point;
+              } else {
+                break;
+              }
+            }
+
+            return selected?.nav ?? null;
+          };
+
+          const calculatedHistory = allDates.map((date) => {
+            let shortTermValue = 0;
+            let longTermValue = 0;
+
+            orders.forEach((order) => {
+              const history = historyMap.get(String(order.fundId)) || [];
+
+              const nav = getNavForDate(history, date);
+
+              if (nav === null) {
+                return;
+              }
+
+              const units = Number(order.units || 0);
+
+              const value = units * nav;
+
+              const horizon = String(
+                order.investmentHorizon || "",
+              ).toUpperCase();
+
+              if (horizon === "SHORT_TERM") {
+                shortTermValue += value;
+              }
+
+              if (horizon === "LONG_TERM") {
+                longTermValue += value;
+              }
+            });
+
+            return {
+              date,
+              shortTermValue,
+              longTermValue,
+            };
+          });
+
+          setPerformanceHistory(calculatedHistory);
+        } catch (error) {
+          console.error("Portfolio performance error:", error);
+
+          setPerformanceHistory([]);
+        } finally {
+          setPerformanceLoading(false);
         }
       }
 
-      const fundList =
-        Array.isArray(fundsData)
+      try {
+        const ordersResponse = await fetch(
+          `${API_BASE_URL}/api/orders/user/${encodeURIComponent(
+            String(currentUser?.id),
+          )}`,
+        );
+
+        const ordersText = await ordersResponse.text();
+
+        let ordersData = {};
+
+        try {
+          ordersData = ordersText ? JSON.parse(ordersText) : {};
+        } catch {
+          ordersData = {};
+        }
+
+        if (!ordersResponse.ok) {
+          throw new Error(
+            ordersData.message ||
+              ordersData.error ||
+              ordersText ||
+              "Unable to load portfolio.",
+          );
+        }
+
+        const orderList = Array.isArray(ordersData)
+          ? ordersData
+          : ordersData.content || [];
+
+        const completedOrders = orderList.filter(
+          (order) => String(order.status || "").toUpperCase() === "COMPLETED",
+        );
+
+        /* =====================================================
+   SORT HOLDINGS
+===================================================== */
+
+        const sortedOrders = [...orders].sort((a, b) => {
+          const aInvested = Number(a.amount || 0);
+
+          const bInvested = Number(b.amount || 0);
+
+          const aProfit = Number(a.profitLoss || 0);
+
+          const bProfit = Number(b.profitLoss || 0);
+
+          const aReturn = aInvested > 0 ? (aProfit / aInvested) * 100 : 0;
+
+          const bReturn = bInvested > 0 ? (bProfit / bInvested) * 100 : 0;
+
+          const aDate = new Date(a.completedAt || a.createdAt || 0).getTime();
+
+          const bDate = new Date(b.completedAt || b.createdAt || 0).getTime();
+
+          switch (holdingSort) {
+            case "oldest":
+              return aDate - bDate;
+
+            case "highestProfit":
+              return bProfit - aProfit;
+
+            case "lowestProfit":
+              return aProfit - bProfit;
+
+            case "highestReturn":
+              return bReturn - aReturn;
+
+            case "lowestReturn":
+              return aReturn - bReturn;
+
+            case "newest":
+            default:
+              return bDate - aDate;
+          }
+        });
+
+        /* =========================================
+         GET LATEST FUND NAV
+      ========================================== */
+
+        const fundsResponse = await fetch(
+          `${API_BASE_URL}/api/funds?page=0&size=100`,
+        );
+
+        let fundsData = {};
+
+        if (fundsResponse.ok) {
+          const fundsText = await fundsResponse.text();
+
+          try {
+            fundsData = fundsText ? JSON.parse(fundsText) : {};
+          } catch {
+            fundsData = {};
+          }
+        }
+
+        const fundList = Array.isArray(fundsData)
           ? fundsData
-          : fundsData.content ||
-            fundsData.funds ||
-            [];
+          : fundsData.content || fundsData.funds || [];
 
-      setLatestFunds(fundList);
+        setLatestFunds(fundList);
 
-      /* =========================================
+        /* =========================================
          CALCULATE CURRENT VALUE
       ========================================== */
 
-      const updatedOrders =
-        completedOrders.map(
-          (order) => {
-            const matchingFund =
-              fundList.find(
-                (fund) =>
-                  String(fund.id) ===
-                  String(order.fundId),
-              );
+        const updatedOrders = completedOrders.map((order) => {
+          const matchingFund = fundList.find(
+            (fund) => String(fund.id) === String(order.fundId),
+          );
 
-            const latestNav =
-              Number(
-                matchingFund?.nav ??
-                  order.nav ??
-                  0,
-              );
+          const latestNav = Number(matchingFund?.nav ?? order.nav ?? 0);
 
-            const units =
-              Number(
-                order.units || 0,
-              );
+          const units = Number(order.units || 0);
 
-            const invested =
-              Number(
-                order.amount || 0,
-              );
+          const invested = Number(order.amount || 0);
 
-            const currentValue =
-              units * latestNav;
+          const currentValue = units * latestNav;
 
-            const profitLoss =
-              currentValue - invested;
+          const profitLoss = currentValue - invested;
 
-            return {
-              ...order,
-              currentNav:
-                latestNav,
-              currentValue,
-              profitLoss,
-            };
-          },
-        );
+          return {
+            ...order,
+            currentNav: latestNav,
+            currentValue,
+            profitLoss,
+          };
+        });
 
-      setOrders(updatedOrders);
-    } catch (error) {
-      console.error(
-        "Failed to load portfolio:",
-        error,
-      );
+        setOrders(updatedOrders);
+      } catch (error) {
+        console.error("Failed to load portfolio:", error);
 
-      setError(
-        error.message ||
-          "Unable to load portfolio.",
-      );
-    } finally {
-      setLoading(false);
+        setError(error.message || "Unable to load portfolio.");
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
-  /* =========================================
+    /* =========================================
      OVERALL PORTFOLIO
   ========================================== */
 
-  const totalInvested =
-    orders.reduce(
-      (total, order) =>
-        total +
-        Number(
-          order.amount || 0,
-        ),
+    const totalInvested = orders.reduce(
+      (total, order) => total + Number(order.amount || 0),
       0,
     );
 
-  const totalUnits =
-    orders.reduce(
-      (total, order) =>
-        total +
-        Number(
-          order.units || 0,
-        ),
+    const totalUnits = orders.reduce(
+      (total, order) => total + Number(order.units || 0),
       0,
     );
 
-  const currentValue =
-    orders.reduce(
-      (total, order) =>
-        total +
-        Number(
-          order.currentValue ||
-            0,
-        ),
+    const currentValue = orders.reduce(
+      (total, order) => total + Number(order.currentValue || 0),
       0,
     );
 
-  const totalProfitLoss =
-    currentValue -
-    totalInvested;
+    const totalProfitLoss = currentValue - totalInvested;
 
-  const totalReturnPercentage =
-    totalInvested > 0
-      ? (totalProfitLoss /
-          totalInvested) *
-        100
-      : 0;
+    const totalReturnPercentage =
+      totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
 
-  /* =========================================
+    /* =========================================
      SHORT TERM
   ========================================== */
 
-  const shortTermOrders =
-    orders.filter(
+    const shortTermOrders = orders.filter(
       (order) =>
-        String(
-          order.investmentHorizon ||
-            "",
-        ).toUpperCase() ===
-        "SHORT_TERM",
+        String(order.investmentHorizon || "").toUpperCase() === "SHORT_TERM",
     );
 
-  const shortTermInvested =
-    shortTermOrders.reduce(
-      (total, order) =>
-        total +
-        Number(
-          order.amount || 0,
-        ),
+    const shortTermInvested = shortTermOrders.reduce(
+      (total, order) => total + Number(order.amount || 0),
       0,
     );
 
-  const shortTermCurrentValue =
-    shortTermOrders.reduce(
-      (total, order) =>
-        total +
-        Number(
-          order.currentValue ||
-            0,
-        ),
+    const shortTermCurrentValue = shortTermOrders.reduce(
+      (total, order) => total + Number(order.currentValue || 0),
       0,
     );
 
-  const shortTermProfit =
-    shortTermCurrentValue -
-    shortTermInvested;
+    const shortTermProfit = shortTermCurrentValue - shortTermInvested;
 
-  /* =========================================
+    /* =========================================
      LONG TERM
   ========================================== */
 
-  const longTermOrders =
-    orders.filter(
+    const longTermOrders = orders.filter(
       (order) =>
-        String(
-          order.investmentHorizon ||
-            "",
-        ).toUpperCase() ===
-        "LONG_TERM",
+        String(order.investmentHorizon || "").toUpperCase() === "LONG_TERM",
     );
 
-  const longTermInvested =
-    longTermOrders.reduce(
-      (total, order) =>
-        total +
-        Number(
-          order.amount || 0,
-        ),
+    const longTermInvested = longTermOrders.reduce(
+      (total, order) => total + Number(order.amount || 0),
       0,
     );
 
-  const longTermCurrentValue =
-    longTermOrders.reduce(
-      (total, order) =>
-        total +
-        Number(
-          order.currentValue ||
-            0,
-        ),
+    const longTermCurrentValue = longTermOrders.reduce(
+      (total, order) => total + Number(order.currentValue || 0),
       0,
     );
 
-  const longTermProfit =
-    longTermCurrentValue -
-    longTermInvested;
+    const longTermProfit = longTermCurrentValue - longTermInvested;
 
-  /* =========================================
+    /* =========================================
      ALLOCATION
   ========================================== */
 
-  const categorizedInvested =
-    shortTermInvested +
-    longTermInvested;
+    const categorizedInvested = shortTermInvested + longTermInvested;
 
-  const shortTermPercentage =
-    categorizedInvested > 0
-      ? (shortTermInvested /
-          categorizedInvested) *
-        100
-      : 0;
+    const shortTermPercentage =
+      categorizedInvested > 0
+        ? (shortTermInvested / categorizedInvested) * 100
+        : 0;
 
-  const longTermPercentage =
-    categorizedInvested > 0
-      ? (longTermInvested /
-          categorizedInvested) *
-        100
-      : 0;
+    const longTermPercentage =
+      categorizedInvested > 0
+        ? (longTermInvested / categorizedInvested) * 100
+        : 0;
 
-  /* =========================================
+    /* =========================================
      DONUT CHART
   ========================================== */
 
-  const donutRadius = 82;
-  const donutCircumference =
-    2 * Math.PI * donutRadius;
+    const donutRadius = 82;
+    const donutCircumference = 2 * Math.PI * donutRadius;
 
-  const longTermDash =
-    (longTermPercentage /
-      100) *
-    donutCircumference;
+    const longTermDash = (longTermPercentage / 100) * donutCircumference;
 
-  const shortTermDash =
-    (shortTermPercentage /
-      100) *
-    donutCircumference;
+    const shortTermDash = (shortTermPercentage / 100) * donutCircumference;
 
-  /* =========================================
+    /* =========================================
      PERFORMANCE BAR GRAPH
   ========================================== */
 
-  const performanceMax =
-    Math.max(
+    const performanceMax = Math.max(
       shortTermInvested,
       shortTermCurrentValue,
       longTermInvested,
@@ -2912,172 +2850,101 @@ export default function App() {
       1,
     );
 
-  const getBarHeight = (
-    value,
-  ) => {
+    const getBarHeight = (value) => {
+      return (Number(value || 0) / performanceMax) * 180;
+    };
+
     return (
-      (Number(value || 0) /
-        performanceMax) *
-      180
-    );
-  };
-
-  return (
-    <main className="portfolio-page">
-      <div className="portfolio-container">
-
-        {/* =====================================
+      <main className="portfolio-page">
+        <div className="portfolio-container">
+          {/* =====================================
             HEADER
         ====================================== */}
 
-        <div className="portfolio-page-heading">
-          <div>
-            <div className="performance-label">
-              INVESTMENTS
+          <div className="portfolio-page-heading">
+            <div>
+              <div className="performance-label">INVESTMENTS</div>
+
+              <h1>My Portfolio</h1>
+
+              <p>Track your investments, returns and money allocation.</p>
             </div>
-
-            <h1>
-              My Portfolio
-            </h1>
-
-            <p>
-              Track your investments,
-              returns and money allocation.
-            </p>
           </div>
-        </div>
 
-        {loading && (
-          <div className="page-loading">
-            <div className="loading-spinner" />
+          {loading && (
+            <div className="page-loading">
+              <div className="loading-spinner" />
 
-            <span>
-              Loading portfolio...
-            </span>
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="empty-state">
-            <div className="empty-icon">
-              !
-            </div>
-
-            <h3>
-              Unable to load portfolio
-            </h3>
-
-            <p>{error}</p>
-
-            <button
-              className="payment-retry-button"
-              onClick={loadPortfolio}
-            >
-              Try Again
-            </button>
-          </div>
-        )}
-
-        {!loading &&
-          !error &&
-          orders.length === 0 && (
-            <div className="empty-state">
-              <div className="empty-icon">
-                ◈
-              </div>
-
-              <h3>
-                Your portfolio is empty
-              </h3>
-
-              <p>
-                Completed investments will
-                appear here.
-              </p>
+              <span>Loading portfolio...</span>
             </div>
           )}
 
-        {!loading &&
-          !error &&
-          orders.length > 0 && (
-            <>
+          {!loading && error && (
+            <div className="empty-state">
+              <div className="empty-icon">!</div>
 
+              <h3>Unable to load portfolio</h3>
+
+              <p>{error}</p>
+
+              <button className="payment-retry-button" onClick={loadPortfolio}>
+                Try Again
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && orders.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-icon">◈</div>
+
+              <h3>Your portfolio is empty</h3>
+
+              <p>Completed investments will appear here.</p>
+            </div>
+          )}
+
+          {!loading && !error && orders.length > 0 && (
+            <>
               {/* =====================================
                   SUMMARY
               ====================================== */}
 
               <section className="portfolio-summary-grid">
+                <div className="portfolio-summary-card">
+                  <span>Total Invested</span>
+
+                  <strong>{formatCurrency(totalInvested)}</strong>
+                </div>
 
                 <div className="portfolio-summary-card">
-                  <span>
-                    Total Invested
-                  </span>
+                  <span>Current Value</span>
 
-                  <strong>
-                    {formatCurrency(
-                      totalInvested,
-                    )}
+                  <strong>{formatCurrency(currentValue)}</strong>
+                </div>
+
+                <div className="portfolio-summary-card">
+                  <span>Profit / Loss</span>
+
+                  <strong
+                    className={totalProfitLoss >= 0 ? "positive" : "negative"}
+                  >
+                    {totalProfitLoss >= 0 ? "+" : ""}
+                    {formatCurrency(totalProfitLoss)}
                   </strong>
                 </div>
 
                 <div className="portfolio-summary-card">
-                  <span>
-                    Current Value
-                  </span>
-
-                  <strong>
-                    {formatCurrency(
-                      currentValue,
-                    )}
-                  </strong>
-                </div>
-
-                <div className="portfolio-summary-card">
-                  <span>
-                    Profit / Loss
-                  </span>
+                  <span>Total Return</span>
 
                   <strong
                     className={
-                      totalProfitLoss >= 0
-                        ? "positive"
-                        : "negative"
+                      totalReturnPercentage >= 0 ? "positive" : "negative"
                     }
                   >
-                    {totalProfitLoss >=
-                    0
-                      ? "+"
-                      : ""}
-                    {formatCurrency(
-                      totalProfitLoss,
-                    )}
+                    {totalReturnPercentage >= 0 ? "+" : ""}
+                    {totalReturnPercentage.toFixed(2)}%
                   </strong>
                 </div>
-
-                <div className="portfolio-summary-card">
-                  <span>
-                    Total Return
-                  </span>
-
-                  <strong
-                    className={
-                      totalReturnPercentage >=
-                      0
-                        ? "positive"
-                        : "negative"
-                    }
-                  >
-                    {totalReturnPercentage >=
-                    0
-                      ? "+"
-                      : ""}
-                    {totalReturnPercentage.toFixed(
-                      2,
-                    )}
-                    %
-                  </strong>
-                </div>
-
               </section>
 
               {/* =====================================
@@ -3085,24 +2952,14 @@ export default function App() {
               ====================================== */}
 
               <section className="portfolio-analysis-section">
-
-                <div className="performance-label">
-                  INVESTMENT ALLOCATION
-                </div>
+                <div className="performance-label">INVESTMENT ALLOCATION</div>
 
                 <div className="portfolio-allocation-grid">
-
                   {/* DONUT */}
 
                   <div className="portfolio-donut-card">
-
                     <div className="portfolio-donut-wrapper">
-
-                      <svg
-                        className="portfolio-donut"
-                        viewBox="0 0 220 220"
-                      >
-
+                      <svg className="portfolio-donut" viewBox="0 0 220 220">
                         <circle
                           cx="110"
                           cy="110"
@@ -3110,8 +2967,7 @@ export default function App() {
                           className="portfolio-donut-background"
                         />
 
-                        {longTermPercentage >
-                          0 && (
+                        {longTermPercentage > 0 && (
                           <circle
                             cx="110"
                             cy="110"
@@ -3123,8 +2979,7 @@ export default function App() {
                           />
                         )}
 
-                        {shortTermPercentage >
-                          0 && (
+                        {shortTermPercentage > 0 && (
                           <circle
                             cx="110"
                             cy="110"
@@ -3135,316 +2990,260 @@ export default function App() {
                             transform="rotate(-90 110 110)"
                           />
                         )}
-
                       </svg>
 
                       <div className="portfolio-donut-center">
-
                         <strong>
-                          {Math.round(
-                            longTermPercentage +
-                              shortTermPercentage,
-                          )}
+                          {Math.round(longTermPercentage + shortTermPercentage)}
                           %
                         </strong>
 
-                        <span>
-                          Allocated
-                        </span>
-
+                        <span>Allocated</span>
                       </div>
-
                     </div>
 
                     <div className="portfolio-allocation-legend">
-
                       <div>
                         <span className="legend-dot long" />
 
-                        <span>
-                          Long Term
-                        </span>
+                        <span>Long Term</span>
 
-                        <strong>
-                          {longTermPercentage.toFixed(
-                            0,
-                          )}
-                          %
-                        </strong>
+                        <strong>{longTermPercentage.toFixed(0)}%</strong>
                       </div>
 
                       <div>
                         <span className="legend-dot short" />
 
-                        <span>
-                          Short Term
-                        </span>
+                        <span>Short Term</span>
 
-                        <strong>
-                          {shortTermPercentage.toFixed(
-                            0,
-                          )}
-                          %
-                        </strong>
+                        <strong>{shortTermPercentage.toFixed(0)}%</strong>
                       </div>
-
                     </div>
-
                   </div>
 
                   {/* MONEY FLOW */}
 
                   <div className="portfolio-money-flow-card">
-
-                    <h2>
-                      Money Flow
-                    </h2>
+                    <h2>Money Flow</h2>
 
                     <div className="portfolio-money-flow-item">
-
                       <div className="portfolio-money-flow-title">
                         <span className="flow-indicator long" />
 
-                        <strong>
-                          Long Term
-                        </strong>
+                        <strong>Long Term</strong>
                       </div>
 
                       <div className="portfolio-money-flow-values">
+                        <span>{formatCurrency(longTermInvested)}</span>
 
-                        <span>
-                          {formatCurrency(
-                            longTermInvested,
-                          )}
-                        </span>
+                        <span>→</span>
 
-                        <span>
-                          →
-                        </span>
-
-                        <strong>
-                          {formatCurrency(
-                            longTermCurrentValue,
-                          )}
-                        </strong>
-
+                        <strong>{formatCurrency(longTermCurrentValue)}</strong>
                       </div>
 
                       <div
                         className={
-                          longTermProfit >=
-                          0
-                            ? "positive"
-                            : "negative"
+                          longTermProfit >= 0 ? "positive" : "negative"
                         }
                       >
-                        {longTermProfit >=
-                        0
-                          ? "+"
-                          : ""}
-                        {formatCurrency(
-                          longTermProfit,
-                        )}
+                        {longTermProfit >= 0 ? "+" : ""}
+                        {formatCurrency(longTermProfit)}
                       </div>
-
                     </div>
 
                     <div className="portfolio-money-flow-divider" />
 
                     <div className="portfolio-money-flow-item">
-
                       <div className="portfolio-money-flow-title">
                         <span className="flow-indicator short" />
 
-                        <strong>
-                          Short Term
-                        </strong>
+                        <strong>Short Term</strong>
                       </div>
 
                       <div className="portfolio-money-flow-values">
+                        <span>{formatCurrency(shortTermInvested)}</span>
 
-                        <span>
-                          {formatCurrency(
-                            shortTermInvested,
-                          )}
-                        </span>
+                        <span>→</span>
 
-                        <span>
-                          →
-                        </span>
-
-                        <strong>
-                          {formatCurrency(
-                            shortTermCurrentValue,
-                          )}
-                        </strong>
-
+                        <strong>{formatCurrency(shortTermCurrentValue)}</strong>
                       </div>
 
                       <div
                         className={
-                          shortTermProfit >=
-                          0
-                            ? "positive"
-                            : "negative"
+                          shortTermProfit >= 0 ? "positive" : "negative"
                         }
                       >
-                        {shortTermProfit >=
-                        0
-                          ? "+"
-                          : ""}
-                        {formatCurrency(
-                          shortTermProfit,
-                        )}
+                        {shortTermProfit >= 0 ? "+" : ""}
+                        {formatCurrency(shortTermProfit)}
                       </div>
-
                     </div>
-
                   </div>
-
                 </div>
-
               </section>
 
               {/* =====================================
                   PERFORMANCE
               ====================================== */}
 
-              <section className="portfolio-analysis-section">
+              {/* =====================================
+    PERFORMANCE
+===================================== */}
 
-                <div className="performance-label">
-                  INVESTMENT PERFORMANCE
-                </div>
+              <section className="portfolio-analysis-section">
+                <div className="performance-label">INVESTMENT PERFORMANCE</div>
 
                 <div className="portfolio-performance-card">
-
                   <div className="portfolio-performance-header">
-
                     <div>
-                      <h2>
-                        Short Term vs Long Term
-                      </h2>
+                      <h2>Money Flow Over Time</h2>
 
                       <p>
-                        Compare your invested
-                        amount with the current
-                        value of each investment
-                        horizon.
+                        Track how your short-term and long-term investments have
+                        changed.
                       </p>
                     </div>
 
-                    <div className="portfolio-chart-legend">
-
-                      <span>
-                        <i className="legend-bar invested" />
-                        Invested
-                      </span>
-
-                      <span>
-                        <i className="legend-bar current" />
-                        Current Value
-                      </span>
-
+                    <div className="portfolio-period-selector">
+                      {[
+                        ["1M", "1 Month"],
+                        ["3M", "3 Months"],
+                        ["6M", "6 Months"],
+                        ["1Y", "1 Year"],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          className={
+                            performancePeriod === value ? "active" : ""
+                          }
+                          onClick={() => setPerformancePeriod(value)}
+                        >
+                          {value}
+                        </button>
+                      ))}
                     </div>
-
                   </div>
 
-                  <div className="portfolio-bar-chart">
+                  <div className="portfolio-chart-legend">
+                    <span>
+                      <i className="legend-bar short" />
+                      Short Term
+                    </span>
 
-                    <div className="portfolio-chart-y-axis">
-
-                      <span>
-                        {formatCurrency(
-                          performanceMax,
-                        )}
-                      </span>
-
-                      <span>
-                        ₹0
-                      </span>
-
-                    </div>
-
-                    <div className="portfolio-bars-area">
-
-                      <div className="portfolio-bar-group">
-
-                        <div className="portfolio-bars">
-
-                          <div
-                            className="portfolio-bar invested"
-                            style={{
-                              height: `${getBarHeight(
-                                shortTermInvested,
-                              )}px`,
-                            }}
-                            title={`Short Term Invested: ${formatCurrency(
-                              shortTermInvested,
-                            )}`}
-                          />
-
-                          <div
-                            className="portfolio-bar current"
-                            style={{
-                              height: `${getBarHeight(
-                                shortTermCurrentValue,
-                              )}px`,
-                            }}
-                            title={`Short Term Current Value: ${formatCurrency(
-                              shortTermCurrentValue,
-                            )}`}
-                          />
-
-                        </div>
-
-                        <strong>
-                          Short Term
-                        </strong>
-
-                      </div>
-
-                      <div className="portfolio-bar-group">
-
-                        <div className="portfolio-bars">
-
-                          <div
-                            className="portfolio-bar invested"
-                            style={{
-                              height: `${getBarHeight(
-                                longTermInvested,
-                              )}px`,
-                            }}
-                            title={`Long Term Invested: ${formatCurrency(
-                              longTermInvested,
-                            )}`}
-                          />
-
-                          <div
-                            className="portfolio-bar current"
-                            style={{
-                              height: `${getBarHeight(
-                                longTermCurrentValue,
-                              )}px`,
-                            }}
-                            title={`Long Term Current Value: ${formatCurrency(
-                              longTermCurrentValue,
-                            )}`}
-                          />
-
-                        </div>
-
-                        <strong>
-                          Long Term
-                        </strong>
-
-                      </div>
-
-                    </div>
-
+                    <span>
+                      <i className="legend-bar long" />
+                      Long Term
+                    </span>
                   </div>
 
+                  {performanceLoading ? (
+                    <div className="portfolio-chart-loading">
+                      <div className="loading-spinner" />
+
+                      <span>Loading performance...</span>
+                    </div>
+                  ) : performanceHistory.length === 0 ? (
+                    <div className="portfolio-chart-empty">
+                      NAV history is not available for this period.
+                    </div>
+                  ) : (
+                    <div className="portfolio-history-chart">
+                      <div className="portfolio-history-bars">
+                        {performanceHistory
+                          .filter((_, index) => {
+                            const step = Math.max(
+                              1,
+                              Math.ceil(performanceHistory.length / 14),
+                            );
+
+                            return index % step === 0;
+                          })
+                          .map((point) => {
+                            const maxValue = Math.max(
+                              ...performanceHistory.map((item) =>
+                                Math.max(
+                                  item.shortTermValue,
+                                  item.longTermValue,
+                                ),
+                              ),
+                              1,
+                            );
+
+                            const shortHeight =
+                              (point.shortTermValue / maxValue) * 220;
+
+                            const longHeight =
+                              (point.longTermValue / maxValue) * 220;
+
+                            return (
+                              <div
+                                className="portfolio-history-column"
+                                key={point.date}
+                                onMouseEnter={() => setPerformanceHover(point)}
+                                onMouseLeave={() => setPerformanceHover(null)}
+                              >
+                                <div className="portfolio-history-bars">
+                                  <div
+                                    className="portfolio-history-bar short"
+                                    style={{
+                                      height: `${Math.max(shortHeight, 2)}px`,
+                                    }}
+                                  />
+
+                                  <div
+                                    className="portfolio-history-bar long"
+                                    style={{
+                                      height: `${Math.max(longHeight, 2)}px`,
+                                    }}
+                                  />
+                                </div>
+
+                                <span>
+                                  {new Date(point.date).toLocaleDateString(
+                                    "en-IN",
+                                    {
+                                      day: "2-digit",
+                                      month: "short",
+                                    },
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      {performanceHover && (
+                        <div className="portfolio-chart-tooltip">
+                          <strong>
+                            {new Date(performanceHover.date).toLocaleDateString(
+                              "en-IN",
+                              {
+                                day: "2-digit",
+                                month: "long",
+                                year: "numeric",
+                              },
+                            )}
+                          </strong>
+
+                          <div>
+                            <span className="tooltip-dot short" />
+                            Short Term
+                            <strong>
+                              {formatCurrency(performanceHover.shortTermValue)}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span className="tooltip-dot long" />
+                            Long Term
+                            <strong>
+                              {formatCurrency(performanceHover.longTermValue)}
+                            </strong>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-
               </section>
 
               {/* =====================================
@@ -3452,312 +3251,193 @@ export default function App() {
               ====================================== */}
 
               <section className="portfolio-holdings-section">
+                <div className="performance-label">MY HOLDINGS</div>
 
-                <div className="performance-label">
-                  MY HOLDINGS
+                <h2>Your Investments</h2>
+                <div className="portfolio-holdings-controls">
+                  <span>Sort holdings:</span>
+
+                  <select
+                    value={holdingSort}
+                    onChange={(event) => setHoldingSort(event.target.value)}
+                  >
+                    <option value="newest">Newest First</option>
+
+                    <option value="oldest">Oldest First</option>
+
+                    <option value="highestProfit">Highest Profit</option>
+
+                    <option value="lowestProfit">Lowest Profit</option>
+
+                    <option value="highestReturn">Highest Return %</option>
+
+                    <option value="lowestReturn">Lowest Return %</option>
+                  </select>
                 </div>
-
-                <h2>
-                  Your Investments
-                </h2>
-
                 <div className="portfolio-holdings-list">
+                  {orders.map((order) => {
+                    const invested = Number(order.amount || 0);
 
-                  {orders.map(
-                    (order) => {
-                      const invested =
-                        Number(
-                          order.amount ||
-                            0,
-                        );
+                    const units = Number(order.units || 0);
 
-                      const units =
-                        Number(
-                          order.units ||
-                            0,
-                        );
+                    const currentNav = Number(order.currentNav || 0);
 
-                      const currentNav =
-                        Number(
-                          order.currentNav ||
-                            0,
-                        );
+                    const value = units * currentNav;
 
-                      const value =
-                        units *
-                        currentNav;
+                    const profitLoss = value - invested;
 
-                      const profitLoss =
-                        value -
-                        invested;
+                    const returnPercentage =
+                      invested > 0 ? (profitLoss / invested) * 100 : 0;
 
-                      const returnPercentage =
-                        invested > 0
-                          ? (profitLoss /
-                              invested) *
-                            100
-                          : 0;
+                    const horizon = String(
+                      order.investmentHorizon || "",
+                    ).toUpperCase();
 
-                      const horizon =
-                        String(
-                          order.investmentHorizon ||
-                            "",
-                        ).toUpperCase();
+                    return (
+                      <article
+                        className="portfolio-holding-card"
+                        key={order.id || order.orderId}
+                      >
+                        <div className="portfolio-holding-header">
+                          <div>
+                            <h3>
+                              {order.fundName || order.fundId || "Investment"}
+                            </h3>
 
-                      return (
-                        <article
-                          className="portfolio-holding-card"
-                          key={
-                            order.id ||
-                            order.orderId
-                          }
-                        >
-
-                          <div className="portfolio-holding-header">
-
-                            <div>
-
-                              <h3>
-                                {order.fundName ||
-                                  order.fundId ||
-                                  "Investment"}
-                              </h3>
-
-                              <p>
-                                Fund ID:{" "}
-                                {order.fundId ||
-                                  "—"}
-                              </p>
-
-                            </div>
-
-                            <div className="portfolio-holding-badges">
-
-                              <span
-                                className={`investment-horizon-badge ${
-                                  horizon ===
-                                  "LONG_TERM"
-                                    ? "long"
-                                    : horizon ===
-                                        "SHORT_TERM"
-                                      ? "short"
-                                      : "unknown"
-                                }`}
-                              >
-                                {horizon ===
-                                "LONG_TERM"
-                                  ? "LONG TERM"
-                                  : horizon ===
-                                      "SHORT_TERM"
-                                    ? "SHORT TERM"
-                                    : "NOT SPECIFIED"}
-                              </span>
-
-                              <span className="order-status paid">
-                                COMPLETED
-                              </span>
-
-                            </div>
-
+                            <p>Fund ID: {order.fundId || "—"}</p>
                           </div>
 
-                          <div className="portfolio-holding-main">
-
-                            <div className="portfolio-holding-flow">
-
-                              <strong>
-                                {formatCurrency(
-                                  invested,
-                                )}
-                              </strong>
-
-                              <span>
-                                →
-                              </span>
-
-                              <strong>
-                                {formatCurrency(
-                                  value,
-                                )}
-                              </strong>
-
-                            </div>
-
-                            <div
-                              className={
-                                profitLoss >=
-                                0
-                                  ? "portfolio-holding-profit positive"
-                                  : "portfolio-holding-profit negative"
-                              }
+                          <div className="portfolio-holding-badges">
+                            <span
+                              className={`investment-horizon-badge ${
+                                horizon === "LONG_TERM"
+                                  ? "long"
+                                  : horizon === "SHORT_TERM"
+                                    ? "short"
+                                    : "unknown"
+                              }`}
                             >
-                              {profitLoss >=
-                              0
-                                ? "+"
-                                : ""}
-                              {formatCurrency(
-                                profitLoss,
-                              )}
-
-                              {" ("}
-
-                              {returnPercentage >=
-                              0
-                                ? "+"
-                                : ""}
-
-                              {returnPercentage.toFixed(
-                                2,
-                              )}
-
-                              {"%)"}
-                            </div>
-
-                          </div>
-
-                          <div className="portfolio-holding-details">
-
-                            <div>
-                              <span>
-                                Invested
-                              </span>
-
-                              <strong>
-                                {formatCurrency(
-                                  invested,
-                                )}
-                              </strong>
-                            </div>
-
-                            <div>
-                              <span>
-                                Units
-                              </span>
-
-                              <strong>
-                                {units.toFixed(
-                                  4,
-                                )}
-                              </strong>
-                            </div>
-
-                            <div>
-                              <span>
-                                Current NAV
-                              </span>
-
-                              <strong>
-                                {formatCurrency(
-                                  currentNav,
-                                )}
-                              </strong>
-                            </div>
-
-                            <div>
-                              <span>
-                                Current Value
-                              </span>
-
-                              <strong>
-                                {formatCurrency(
-                                  value,
-                                )}
-                              </strong>
-                            </div>
-
-                          </div>
-
-                          <div className="portfolio-profit-row">
-
-                            <span>
-                              Profit / Loss
+                              {horizon === "LONG_TERM"
+                                ? "LONG TERM"
+                                : horizon === "SHORT_TERM"
+                                  ? "SHORT TERM"
+                                  : "NOT SPECIFIED"}
                             </span>
 
-                            <strong
-                              className={
-                                profitLoss >=
-                                0
-                                  ? "positive"
-                                  : "negative"
-                              }
-                            >
-                              {profitLoss >=
-                              0
-                                ? "+"
-                                : ""}
+                            <span className="order-status paid">COMPLETED</span>
+                          </div>
+                        </div>
 
-                              {formatCurrency(
-                                profitLoss,
-                              )}
+                        <div className="portfolio-holding-main">
+                          <div className="portfolio-holding-flow">
+                            <strong>{formatCurrency(invested)}</strong>
 
-                              {" ("}
+                            <span>→</span>
 
-                              {returnPercentage >=
-                              0
-                                ? "+"
-                                : ""}
-
-                              {returnPercentage.toFixed(
-                                2,
-                              )}
-
-                              {"%)"}
-                            </strong>
-
+                            <strong>{formatCurrency(value)}</strong>
                           </div>
 
-                          <div className="portfolio-holding-footer">
+                          <div
+                            className={
+                              profitLoss >= 0
+                                ? "portfolio-holding-profit positive"
+                                : "portfolio-holding-profit negative"
+                            }
+                          >
+                            {profitLoss >= 0 ? "+" : ""}
+                            {formatCurrency(profitLoss)}
 
-                            <span>
-                              Order ID:{" "}
-                              {order.orderId ||
-                                "—"}
-                            </span>
+                            {" ("}
 
-                            <span>
-                              Completed:{" "}
-                              {order.completedAt
-                                ? new Date(
-                                    order.completedAt,
-                                  ).toLocaleString(
-                                    "en-IN",
-                                    {
-                                      timeZone:
-                                        "Asia/Kolkata",
-                                      day: "2-digit",
-                                      month:
-                                        "2-digit",
-                                      year: "numeric",
-                                      hour: "2-digit",
-                                      minute:
-                                        "2-digit",
-                                      second:
-                                        "2-digit",
-                                      hour12:
-                                        true,
-                                    },
-                                  )
-                                : "—"}
-                            </span>
+                            {returnPercentage >= 0 ? "+" : ""}
 
+                            {returnPercentage.toFixed(2)}
+
+                            {"%)"}
+                          </div>
+                        </div>
+
+                        <div className="portfolio-holding-details">
+                          <div>
+                            <span>Invested</span>
+
+                            <strong>{formatCurrency(invested)}</strong>
                           </div>
 
-                        </article>
-                      );
-                    },
-                  )}
+                          <div>
+                            <span>Units</span>
 
+                            <strong>{units.toFixed(4)}</strong>
+                          </div>
+
+                          <div>
+                            <span>Current NAV</span>
+
+                            <strong>{formatCurrency(currentNav)}</strong>
+                          </div>
+
+                          <div>
+                            <span>Current Value</span>
+
+                            <strong>{formatCurrency(value)}</strong>
+                          </div>
+                        </div>
+
+                        <div className="portfolio-profit-row">
+                          <span>Profit / Loss</span>
+
+                          <strong
+                            className={
+                              profitLoss >= 0 ? "positive" : "negative"
+                            }
+                          >
+                            {profitLoss >= 0 ? "+" : ""}
+
+                            {formatCurrency(profitLoss)}
+
+                            {" ("}
+
+                            {returnPercentage >= 0 ? "+" : ""}
+
+                            {returnPercentage.toFixed(2)}
+
+                            {"%)"}
+                          </strong>
+                        </div>
+
+                        <div className="portfolio-holding-footer">
+                          <span>Order ID: {order.orderId || "—"}</span>
+
+                          <span>
+                            Completed:{" "}
+                            {order.completedAt
+                              ? new Date(order.completedAt).toLocaleString(
+                                  "en-IN",
+                                  {
+                                    timeZone: "Asia/Kolkata",
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                    hour12: true,
+                                  },
+                                )
+                              : "—"}
+                          </span>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
-
               </section>
-
             </>
           )}
-
-      </div>
-    </main>
-  );
-}
+        </div>
+      </main>
+    );
+  }
   /* =====================================================
      PROFILE
   ===================================================== */

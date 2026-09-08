@@ -5671,3 +5671,468 @@ button {
     font-size: 13px;
   }
 }
+
+/* =====================================================
+   PORTFOLIO PERFORMANCE - INTERACTIVE
+===================================================== */
+
+.portfolio-period-selector {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(120, 140, 160, 0.08);
+}
+
+.portfolio-period-selector button {
+  border: none;
+  background: transparent;
+  padding: 8px 13px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition:
+    transform 0.2s ease,
+    background 0.25s ease,
+    color 0.25s ease;
+}
+
+.portfolio-period-selector button:hover {
+  transform: translateY(-1px);
+}
+
+.portfolio-period-selector button.active {
+  background: #2878ce;
+  color: white;
+  box-shadow:
+    0 4px 12px rgba(40, 120, 206, 0.25);
+}
+
+
+/* =====================================================
+   HISTORY CHART
+===================================================== */
+
+.portfolio-history-chart {
+  position: relative;
+  min-height: 290px;
+  margin-top: 25px;
+  padding: 20px 12px 5px;
+}
+
+.portfolio-history-bars {
+  height: 245px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 7px;
+  border-bottom: 1px solid
+    rgba(120, 140, 160, 0.2);
+  padding: 0 8px;
+}
+
+.portfolio-history-column {
+  position: relative;
+  flex: 1;
+  min-width: 20px;
+  max-width: 65px;
+  height: 245px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  cursor: pointer;
+}
+
+.portfolio-history-column > span {
+  position: absolute;
+  bottom: -24px;
+  font-size: 10px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.portfolio-history-column .portfolio-history-bars {
+  height: 220px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+}
+
+.portfolio-history-bar {
+  width: 40%;
+  max-width: 18px;
+  min-height: 2px;
+  border-radius: 5px 5px 0 0;
+
+  transform-origin: bottom;
+
+  animation:
+    portfolioBarGrow
+    0.65s
+    cubic-bezier(
+      0.22,
+      1,
+      0.36,
+      1
+    );
+
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.portfolio-history-bar.short {
+  background: #70a7df;
+}
+
+.portfolio-history-bar.long {
+  background: #2878ce;
+}
+
+.portfolio-history-column:hover
+.portfolio-history-bar {
+  transform:
+    translateY(-5px)
+    scaleY(1.03);
+
+  filter: brightness(1.08);
+}
+
+@keyframes portfolioBarGrow {
+  from {
+    transform: scaleY(0);
+  }
+
+  to {
+    transform: scaleY(1);
+  }
+}
+
+
+/* =====================================================
+   TOOLTIP
+===================================================== */
+
+.portfolio-chart-tooltip {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  min-width: 210px;
+  padding: 15px 17px;
+
+  border-radius: 12px;
+
+  background: rgba(
+    20,
+    35,
+    55,
+    0.96
+  );
+
+  color: white;
+
+  box-shadow:
+    0 12px 30px
+      rgba(0, 0, 0, 0.18);
+
+  z-index: 10;
+
+  animation:
+    portfolioTooltipIn
+    0.18s
+    ease-out;
+}
+
+.portfolio-chart-tooltip > strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.portfolio-chart-tooltip > div {
+  display: grid;
+  grid-template-columns:
+    auto
+    1fr
+    auto;
+
+  align-items: center;
+  gap: 7px;
+
+  margin-top: 7px;
+
+  font-size: 12px;
+}
+
+.portfolio-chart-tooltip > div strong {
+  margin-left: auto;
+}
+
+.tooltip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.tooltip-dot.short {
+  background: #70a7df;
+}
+
+.tooltip-dot.long {
+  background: #2878ce;
+}
+
+@keyframes portfolioTooltipIn {
+  from {
+    opacity: 0;
+    transform:
+      translateY(5px)
+      scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+
+/* =====================================================
+   CHART LEGEND
+===================================================== */
+
+.legend-bar.short {
+  background: #70a7df;
+}
+
+.legend-bar.long {
+  background: #2878ce;
+}
+
+
+/* =====================================================
+   HOLDINGS SORT
+===================================================== */
+
+.portfolio-holdings-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin:
+    12px 0 20px;
+}
+
+.portfolio-holdings-controls > span {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.portfolio-holdings-controls select {
+  border: 1px solid
+    rgba(120, 140, 160, 0.22);
+
+  border-radius: 9px;
+
+  padding:
+    9px 12px;
+
+  background:
+    rgba(255, 255, 255, 0.7);
+
+  font-size: 12px;
+
+  cursor: pointer;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.portfolio-holdings-controls select:focus {
+  border-color: #2878ce;
+
+  box-shadow:
+    0 0 0 3px
+      rgba(40, 120, 206, 0.1);
+}
+
+
+/* =====================================================
+   HOLDING CARD ANIMATION
+===================================================== */
+
+.portfolio-holding-card {
+  animation:
+    portfolioHoldingIn
+    0.45s
+    ease-out;
+
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.portfolio-holding-card:hover {
+  transform:
+    translateY(-3px);
+
+  box-shadow:
+    0 12px 28px
+      rgba(20, 50, 90, 0.08);
+}
+
+@keyframes portfolioHoldingIn {
+  from {
+    opacity: 0;
+    transform:
+      translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateY(0);
+  }
+}
+
+
+/* =====================================================
+   DONUT ANIMATION
+===================================================== */
+
+.portfolio-donut-long,
+.portfolio-donut-short {
+  animation:
+    portfolioDonutIn
+    1s
+    cubic-bezier(
+      0.22,
+      1,
+      0.36,
+      1
+    );
+
+  transition:
+    filter 0.2s ease,
+    stroke-width 0.2s ease;
+}
+
+.portfolio-donut-long:hover,
+.portfolio-donut-short:hover {
+  filter: brightness(1.08);
+}
+
+@keyframes portfolioDonutIn {
+  from {
+    opacity: 0;
+    stroke-dashoffset: 520;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+
+/* =====================================================
+   CHART LOADING / EMPTY
+===================================================== */
+
+.portfolio-chart-loading {
+  min-height: 290px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 12px;
+
+  opacity: 0.7;
+}
+
+.portfolio-chart-empty {
+  min-height: 290px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0.6;
+  font-size: 13px;
+}
+
+
+/* =====================================================
+   DARK MODE
+===================================================== */
+
+.dark-mode
+.portfolio-holdings-controls
+select {
+  background:
+    rgba(255, 255, 255, 0.05);
+
+  color: inherit;
+}
+
+.dark-mode
+.portfolio-period-selector {
+  background:
+    rgba(255, 255, 255, 0.06);
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 700px) {
+
+  .portfolio-performance-header {
+    flex-direction: column;
+  }
+
+  .portfolio-period-selector {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .portfolio-period-selector button {
+    flex: 1;
+  }
+
+  .portfolio-holdings-controls {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .portfolio-history-bars {
+    gap: 3px;
+  }
+
+  .portfolio-history-bar {
+    max-width: 10px;
+  }
+
+  .portfolio-chart-tooltip {
+    right: 5px;
+    left: 5px;
+    min-width: unset;
+  }
+}
+
+
