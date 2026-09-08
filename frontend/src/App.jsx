@@ -1938,19 +1938,22 @@ export default function App() {
       return order.status || "PENDING";
     }
 
-    function formatOrderDate(value) {
-      if (!value) {
-        return "—";
-      }
+   function formatDate(dateValue) {
+  if (!dateValue) {
+    return "—";
+  }
 
-      const date = new Date(value);
-
-      if (Number.isNaN(date.getTime())) {
-        return String(value);
-      }
-
-      return date.toLocaleString("en-IN");
-    }
+  return new Date(dateValue).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+}
 
     function getInvestmentName(order) {
       return order.fundName || order.fund?.name || order.fundId || "Investment";
@@ -2202,9 +2205,25 @@ export default function App() {
     }
 
     const formatDate = (value) => {
-      if (!value) {
-        return "—";
-      }
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : date.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+};
 
       const date = new Date(value);
 
