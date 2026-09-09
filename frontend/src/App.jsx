@@ -2440,6 +2440,9 @@ export default function App() {
 
     const [performanceHover, setPerformanceHover] = useState(null);
 
+    const [performanceSlide, setPerformanceSlide] = useState(0);
+    const [performanceTouchStart, setPerformanceTouchStart] = useState(null);
+
     /* =====================================================
      LOAD PORTFOLIO WHEN USER CHANGES
   ===================================================== */
@@ -2709,28 +2712,175 @@ export default function App() {
     const longTermDash = (longTermPercentage / 100) * donutCircumference;
 
     const shortTermDash = (shortTermPercentage / 100) * donutCircumference;
-
     /* =========================================
-     INVESTMENT SPIKE GRAPH
+   INVESTMENT PERFORMANCE SWIPE GRAPH
 
-     Each holding has:
-     - Invested amount
-     - Current value
+   Uses ONLY real portfolio data already loaded
+   from completed orders.
 
-     This graph does NOT use NAV history.
-  ========================================== */
+   Slide 1 = Overall Value
+   Slide 2 = Invested Amount
+   Slide 3 = Profit / Loss
 
-    const performanceMax = Math.max(
-      ...orders.flatMap((order) => [
-        Number(order.amount || 0),
-        Number(order.currentValue || 0),
-      ]),
-      1,
-    );
+   This is NOT a fake historical NAV graph.
+   Each point represents an actual completed
+   investment/order in the user's portfolio.
+========================================== */
 
-    const getPerformanceBarHeight = (value) => {
-      return (Number(value || 0) / performanceMax) * 230;
-    };
+    const performanceOrders = [...orders].sort((a, b) => {
+      const aDate = new Date(a.completedAt || a.createdAt || 0).getTime();
+
+      const bDate = new Date(b.completedAt || b.createdAt || 0).getTime();
+
+      return aDate - bDate;
+    });
+
+    const performanceSlides = [
+      {
+        key: "overall",
+        title: "Overall Value",
+        description: "Current value of your completed investments.",
+        total: currentValue,
+      },
+      {
+        key: "invested",
+        title: "Invested Amount",
+        description: "Total amount you have invested.",
+        total: totalInvested,
+      },
+      {
+        key: "profit",
+        title: "Profit & Loss",
+        description: "Current profit or loss across your investments.",
+        total: totalProfitLoss,
+      },
+    ];
+
+    function getPerformanceValue(order, mode) {
+      if (mode === "overall") {
+        return Number(order.currentValue || 0);
+      }
+
+      if (mode === "invested") {
+        return Number(order.amount || 0);
+      }
+
+      return Number(order.profitLoss || 0);
+    }
+
+    function formatPerformanceDate(order) {
+      const rawDate = order.completedAt || order.createdAt;
+
+      if (!rawDate) {
+        return "—";
+      }
+
+      const date = parseBackendDate(rawDate);
+
+      if (!date || Number.isNaN(date.getTime())) {
+        return "—";
+      }
+
+      return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+      });
+    }
+
+    function getPerformancePoints(mode) {
+      if (performanceOrders.length === 0) {
+        return [];
+      }
+
+      const values = performanceOrders.map((order) =>
+        getPerformanceValue(order, mode),
+      );
+
+      const width = 1000;
+      const left = 55;
+      const right = 945;
+
+      const chartWidth = right - left;
+
+      if (mode === "profit") {
+        const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 1);
+
+        const baseline = 150;
+        const spikeHeight = 105;
+
+        return performanceOrders.map((order, index) => {
+          const value = values[index];
+
+          const x =
+            performanceOrders.length === 1
+              ? width / 2
+              : left + (index / (performanceOrders.length - 1)) * chartWidth;
+
+          const y = baseline - (value / maxAbs) * spikeHeight;
+
+          return {
+            order,
+            value,
+            x,
+            y,
+            baseline,
+          };
+        });
+      }
+
+      const maxValue = Math.max(...values, 1);
+
+      const bottom = 255;
+      const top = 35;
+      const graphHeight = bottom - top;
+
+      return performanceOrders.map((order, index) => {
+        const value = values[index];
+
+        const x =
+          performanceOrders.length === 1
+            ? width / 2
+            : left + (index / (performanceOrders.length - 1)) * chartWidth;
+
+        const y = bottom - (value / maxValue) * graphHeight;
+
+        return {
+          order,
+          value,
+          x,
+          y,
+          baseline: bottom,
+        };
+      });
+    }
+
+    function handlePerformanceTouchStart(event) {
+      setPerformanceTouchStart(event.touches[0].clientX);
+    }
+
+    function handlePerformanceTouchEnd(event) {
+      if (performanceTouchStart === null) {
+        return;
+      }
+
+      const touchEnd = event.changedTouches[0].clientX;
+      const distance = touchEnd - performanceTouchStart;
+
+      if (Math.abs(distance) < 50) {
+        setPerformanceTouchStart(null);
+        return;
+      }
+
+      if (distance < 0) {
+        setPerformanceSlide((current) =>
+          Math.min(current + 1, performanceSlides.length - 1),
+        );
+      } else {
+        setPerformanceSlide((current) => Math.max(current - 1, 0));
+      }
+
+      setPerformanceTouchStart(null);
+    }
 
     /* =========================================
      RENDER
@@ -2988,11 +3138,9 @@ export default function App() {
                   </div>
                 </div>
               </section>
-
               {/* =====================================
-                  INVESTMENT PERFORMANCE
-              ====================================== */}
-
+    INVESTMENT PERFORMANCE
+====================================== */}
               <section
                 className="portfolio-analysis-section"
                 style={{
@@ -3013,9 +3161,13 @@ export default function App() {
                   className="portfolio-performance-card"
                   style={{
                     paddingTop: "24px",
-                    paddingBottom: "28px",
+                    paddingBottom: "24px",
+                    overflow: "hidden",
                   }}
                 >
+                  {/* =====================================
+        PERFORMANCE HEADER
+    ====================================== */}
                   <div
                     className="portfolio-performance-header"
                     style={{
@@ -3023,185 +3175,454 @@ export default function App() {
                     }}
                   >
                     <div>
-                      <h2>Investment Value</h2>
+                      <h2>{performanceSlides[performanceSlide].title}</h2>
 
-                      <p>
-                        Compare the amount invested with the current value of
-                        your holdings.
-                      </p>
+                      <p>{performanceSlides[performanceSlide].description}</p>
+                    </div>
+
+                    <div
+                      style={{
+                        textAlign: "right",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <strong
+                        style={{
+                          display: "block",
+                          fontSize: "24px",
+                          lineHeight: "1.2",
+                        }}
+                        className={
+                          performanceSlides[performanceSlide].key === "profit"
+                            ? performanceSlides[performanceSlide].total >= 0
+                              ? "positive"
+                              : "negative"
+                            : ""
+                        }
+                      >
+                        {performanceSlides[performanceSlide].key === "profit" &&
+                        performanceSlides[performanceSlide].total >= 0
+                          ? "+"
+                          : ""}
+                        {formatCurrency(
+                          performanceSlides[performanceSlide].total,
+                        )}
+                      </strong>
+
+                      <span
+                        style={{
+                          display: "block",
+                          marginTop: "4px",
+                          fontSize: "11px",
+                          opacity: 0.65,
+                        }}
+                      >
+                        {performanceOrders.length} investment
+                        {performanceOrders.length === 1 ? "" : "s"}
+                      </span>
                     </div>
                   </div>
 
-                  {/* GRAPH LEGEND */}
-
-                  <div className="portfolio-chart-legend">
-                    <span>
-                      <i className="legend-bar short" />
-                      Invested
-                    </span>
-
-                    <span>
-                      <i className="legend-bar long" />
-                      Current Value
-                    </span>
-                  </div>
-
-                  {/* SPIKE GRAPH */}
-
+                  {/* =====================================
+        SWIPE AREA
+    ====================================== */}
                   <div
-                    className="portfolio-history-chart"
                     style={{
-                      minHeight: "330px",
-                      paddingTop: "20px",
-                      paddingBottom: "12px",
+                      width: "100%",
+                      overflow: "hidden",
+                      touchAction: "pan-y",
+                      cursor: "grab",
                     }}
+                    onTouchStart={handlePerformanceTouchStart}
+                    onTouchEnd={handlePerformanceTouchEnd}
                   >
                     <div
-                      className="portfolio-history-bars"
                       style={{
-                        minHeight: "280px",
-                        alignItems: "flex-end",
-                        justifyContent: "space-evenly",
-                        gap: "18px",
-                        padding: "20px 24px 0",
+                        display: "flex",
+                        width: "300%",
+                        transform: `translateX(-${
+                          performanceSlide * (100 / 3)
+                        }%)`,
+                        transition: "transform 0.45s ease",
                       }}
                     >
-                      {orders.map((order) => {
-                        const invested = Number(order.amount || 0);
+                      {performanceSlides.map((slide) => {
+                        const points = getPerformancePoints(slide.key);
 
-                        const current = Number(order.currentValue || 0);
+                        const linePath = points
+                          .map(
+                            (point, index) =>
+                              `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`,
+                          )
+                          .join(" ");
 
-                        const profitLoss = current - invested;
-
-                        const investedHeight =
-                          getPerformanceBarHeight(invested);
-
-                        const currentHeight = getPerformanceBarHeight(current);
-
-                        const fundName =
-                          order.fundName || `Fund ${order.fundId}`;
+                        const areaPath =
+                          points.length > 1 && slide.key !== "profit"
+                            ? `${linePath} L ${
+                                points[points.length - 1].x
+                              } 255 L ${points[0].x} 255 Z`
+                            : "";
 
                         return (
                           <div
-                            className="portfolio-history-column"
-                            key={order.id || order.orderId}
-                            onMouseEnter={() => setPerformanceHover(order)}
-                            onMouseLeave={() => setPerformanceHover(null)}
+                            key={slide.key}
                             style={{
-                              minWidth: "72px",
-                              flex: "1 1 0",
-                              maxWidth: "130px",
-                              height: "280px",
-                              display: "flex",
-                              flexDirection: "column",
-                              justifyContent: "flex-end",
-                              alignItems: "center",
-                              position: "relative",
+                              width: "33.333333%",
+                              flexShrink: 0,
+                              padding: "0 4px",
+                              boxSizing: "border-box",
                             }}
                           >
-                            {/* BAR AREA */}
-
+                            {/* GRAPH */}
                             <div
                               style={{
-                                height: "235px",
                                 width: "100%",
-                                display: "flex",
-                                alignItems: "flex-end",
-                                justifyContent: "center",
-                                gap: "7px",
+                                overflowX: "auto",
+                                overflowY: "hidden",
                               }}
                             >
-                              {/* INVESTED */}
-
-                              <div
-                                className="portfolio-history-bar short"
+                              <svg
+                                viewBox="0 0 1000 310"
+                                width="100%"
                                 style={{
-                                  height: `${Math.max(investedHeight, 4)}px`,
-                                  width: "22px",
-                                  borderRadius: "7px 7px 0 0",
-                                  transition: "height 0.3s ease",
-                                }}
-                              />
-
-                              {/* CURRENT VALUE */}
-
-                              <div
-                                className="portfolio-history-bar long"
-                                style={{
-                                  height: `${Math.max(currentHeight, 4)}px`,
-                                  width: "22px",
-                                  borderRadius: "7px 7px 0 0",
-                                  transition: "height 0.3s ease",
-                                }}
-                              />
-                            </div>
-
-                            {/* FUND LABEL */}
-
-                            <span
-                              style={{
-                                marginTop: "12px",
-                                width: "100%",
-                                textAlign: "center",
-                                fontSize: "12px",
-                                lineHeight: "1.3",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                              title={fundName}
-                            >
-                              {fundName}
-                            </span>
-
-                            {/* HOVER TOOLTIP */}
-
-                            {performanceHover === order && (
-                              <div
-                                className="portfolio-chart-tooltip"
-                                style={{
-                                  zIndex: 20,
-                                  bottom: "110px",
-                                  left: "50%",
-                                  transform: "translateX(-50%)",
-                                  minWidth: "220px",
+                                  minWidth:
+                                    performanceOrders.length > 8
+                                      ? "850px"
+                                      : "100%",
+                                  height: "310px",
+                                  display: "block",
                                 }}
                               >
-                                <strong>{fundName}</strong>
+                                {/* GRID */}
+                                <line
+                                  x1="55"
+                                  y1="35"
+                                  x2="945"
+                                  y2="35"
+                                  stroke="currentColor"
+                                  strokeOpacity="0.06"
+                                />
 
-                                <div>
-                                  <span className="tooltip-dot short" />
-                                  Invested
-                                  <strong>{formatCurrency(invested)}</strong>
-                                </div>
+                                <line
+                                  x1="55"
+                                  y1="90"
+                                  x2="945"
+                                  y2="90"
+                                  stroke="currentColor"
+                                  strokeOpacity="0.06"
+                                />
 
-                                <div>
-                                  <span className="tooltip-dot long" />
-                                  Current Value
-                                  <strong>{formatCurrency(current)}</strong>
-                                </div>
+                                <line
+                                  x1="55"
+                                  y1="145"
+                                  x2="945"
+                                  y2="145"
+                                  stroke="currentColor"
+                                  strokeOpacity="0.06"
+                                />
 
-                                <div
-                                  className={
-                                    profitLoss >= 0 ? "positive" : "negative"
-                                  }
-                                  style={{
-                                    marginTop: "6px",
-                                  }}
-                                >
-                                  Profit / Loss
-                                  <strong>
-                                    {profitLoss >= 0 ? "+" : ""}
+                                <line
+                                  x1="55"
+                                  y1="200"
+                                  x2="945"
+                                  y2="200"
+                                  stroke="currentColor"
+                                  strokeOpacity="0.06"
+                                />
 
-                                    {formatCurrency(profitLoss)}
-                                  </strong>
-                                </div>
-                              </div>
-                            )}
+                                <line
+                                  x1="55"
+                                  y1="255"
+                                  x2="945"
+                                  y2="255"
+                                  stroke="currentColor"
+                                  strokeOpacity="0.06"
+                                />
+
+                                {/* PROFIT / LOSS ZERO LINE */}
+                                {slide.key === "profit" && (
+                                  <line
+                                    x1="55"
+                                    y1="150"
+                                    x2="945"
+                                    y2="150"
+                                    stroke="currentColor"
+                                    strokeOpacity="0.2"
+                                    strokeDasharray="5 5"
+                                  />
+                                )}
+
+                                {/* AREA */}
+                                {areaPath && (
+                                  <path
+                                    d={areaPath}
+                                    fill="currentColor"
+                                    opacity="0.055"
+                                  />
+                                )}
+
+                                {/* SPIKE LINES */}
+                                {points.map((point, index) => {
+                                  const isProfit = slide.key === "profit";
+
+                                  const positive = point.value >= 0;
+
+                                  return (
+                                    <line
+                                      key={`spike-${slide.key}-${index}`}
+                                      x1={point.x}
+                                      y1={point.baseline}
+                                      x2={point.x}
+                                      y2={point.y}
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeOpacity={
+                                        isProfit
+                                          ? positive
+                                            ? "0.45"
+                                            : "0.35"
+                                          : "0.28"
+                                      }
+                                    />
+                                  );
+                                })}
+
+                                {/* MAIN SPIKE LINE */}
+                                {points.length > 1 && (
+                                  <path
+                                    d={linePath}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                )}
+
+                                {/* POINTS */}
+                                {points.map((point, index) => {
+                                  const isProfit = slide.key === "profit";
+
+                                  const positive = point.value >= 0;
+
+                                  return (
+                                    <g
+                                      key={`point-${slide.key}-${index}`}
+                                      style={{
+                                        cursor: "pointer",
+                                      }}
+                                      onMouseEnter={() =>
+                                        setPerformanceHover(point.order)
+                                      }
+                                      onMouseLeave={() =>
+                                        setPerformanceHover(null)
+                                      }
+                                    >
+                                      <circle
+                                        cx={point.x}
+                                        cy={point.y}
+                                        r={
+                                          performanceHover === point.order
+                                            ? "7"
+                                            : "5"
+                                        }
+                                        fill="currentColor"
+                                        stroke="var(--card-bg, white)"
+                                        strokeWidth="3"
+                                        className={
+                                          isProfit
+                                            ? positive
+                                              ? "positive"
+                                              : "negative"
+                                            : ""
+                                        }
+                                      />
+
+                                      {/* DATE */}
+                                      <text
+                                        x={point.x}
+                                        y="282"
+                                        textAnchor="middle"
+                                        fontSize="11"
+                                        fill="currentColor"
+                                        opacity="0.6"
+                                      >
+                                        {formatPerformanceDate(point.order)}
+                                      </text>
+
+                                      {/* TOOLTIP */}
+                                      {performanceHover === point.order && (
+                                        <g>
+                                          <rect
+                                            x={Math.max(
+                                              8,
+                                              Math.min(point.x - 80, 832),
+                                            )}
+                                            y={Math.max(5, point.y - 65)}
+                                            width="160"
+                                            height="52"
+                                            rx="8"
+                                            fill="currentColor"
+                                            opacity="0.95"
+                                          />
+
+                                          <text
+                                            x={Math.max(
+                                              88,
+                                              Math.min(point.x, 912),
+                                            )}
+                                            y={Math.max(25, point.y - 43)}
+                                            textAnchor="middle"
+                                            fontSize="11"
+                                            fill="white"
+                                          >
+                                            {point.order.fundName ||
+                                              `Fund ${point.order.fundId}`}
+                                          </text>
+
+                                          <text
+                                            x={Math.max(
+                                              88,
+                                              Math.min(point.x, 912),
+                                            )}
+                                            y={Math.max(45, point.y - 23)}
+                                            textAnchor="middle"
+                                            fontSize="13"
+                                            fontWeight="700"
+                                            fill="white"
+                                          >
+                                            {point.value >= 0 ? "+" : ""}
+                                            {formatCurrency(point.value)}
+                                          </text>
+                                        </g>
+                                      )}
+                                    </g>
+                                  );
+                                })}
+                              </svg>
+                            </div>
+
+                            {/* GRAPH DESCRIPTION */}
+                            <div
+                              style={{
+                                textAlign: "center",
+                                marginTop: "-2px",
+                                fontSize: "11px",
+                                opacity: 0.55,
+                              }}
+                            >
+                              Each spike represents an actual completed
+                              investment
+                            </div>
                           </div>
                         );
                       })}
                     </div>
+                  </div>
+
+                  {/* =====================================
+        SWIPE CONTROLS
+    ====================================== */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: "14px",
+                      marginTop: "10px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPerformanceSlide((current) =>
+                          Math.max(current - 1, 0),
+                        )
+                      }
+                      disabled={performanceSlide === 0}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        fontSize: "20px",
+                        cursor: performanceSlide === 0 ? "default" : "pointer",
+                        opacity: performanceSlide === 0 ? 0.25 : 0.7,
+                      }}
+                      aria-label="Previous performance graph"
+                    >
+                      ←
+                    </button>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "7px",
+                      }}
+                    >
+                      {performanceSlides.map((slide, index) => (
+                        <button
+                          key={slide.key}
+                          type="button"
+                          onClick={() => setPerformanceSlide(index)}
+                          aria-label={`Show ${slide.title}`}
+                          style={{
+                            width: performanceSlide === index ? "22px" : "7px",
+                            height: "7px",
+                            borderRadius: "999px",
+                            border: "none",
+                            padding: 0,
+                            background:
+                              performanceSlide === index
+                                ? "currentColor"
+                                : "currentColor",
+                            opacity: performanceSlide === index ? 0.85 : 0.22,
+                            cursor: "pointer",
+                            transition: "all 0.25s ease",
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPerformanceSlide((current) =>
+                          Math.min(current + 1, performanceSlides.length - 1),
+                        )
+                      }
+                      disabled={
+                        performanceSlide === performanceSlides.length - 1
+                      }
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        fontSize: "20px",
+                        cursor:
+                          performanceSlide === performanceSlides.length - 1
+                            ? "default"
+                            : "pointer",
+                        opacity:
+                          performanceSlide === performanceSlides.length - 1
+                            ? 0.25
+                            : 0.7,
+                      }}
+                      aria-label="Next performance graph"
+                    >
+                      →
+                    </button>
+                  </div>
+
+                  {/* SWIPE HINT */}
+                  <div
+                    style={{
+                      textAlign: "center",
+                      marginTop: "5px",
+                      fontSize: "10px",
+                      opacity: 0.45,
+                      letterSpacing: "0.3px",
+                    }}
+                  >
+                    Swipe left or right to view
                   </div>
                 </div>
               </section>
