@@ -6134,5 +6134,669 @@ select {
     min-width: unset;
   }
 }
+/* =====================================================
+   PORTFOLIO FINAL LAYOUT FIX
+===================================================== */
 
+/* Main portfolio container */
+.portfolio-page {
+  width: 100%;
+  padding: 42px 24px 80px;
+}
+
+.portfolio-container {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+}
+
+/* =====================================================
+   PORTFOLIO PAGE HEADING
+===================================================== */
+
+.portfolio-page-heading {
+  margin-bottom: 32px;
+  position: relative;
+  z-index: 2;
+}
+
+.portfolio-page-heading h1 {
+  margin: 6px 0 8px;
+  line-height: 1.15;
+}
+
+.portfolio-page-heading p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* =====================================================
+   SUMMARY CARDS
+===================================================== */
+
+.portfolio-summary-grid {
+  margin-bottom: 42px;
+}
+
+/* =====================================================
+   PORTFOLIO ANALYSIS SECTIONS
+===================================================== */
+
+.portfolio-analysis-section {
+  position: relative;
+  z-index: 1;
+
+  margin-top: 42px;
+  margin-bottom: 48px;
+}
+
+.portfolio-analysis-section > .performance-label {
+  display: block;
+
+  margin: 0 0 10px;
+
+  position: relative;
+  z-index: 2;
+}
+
+/* =====================================================
+   PERFORMANCE CARD
+===================================================== */
+
+.portfolio-performance-card {
+  position: relative;
+  z-index: 1;
+
+  margin-top: 16px;
+  padding: 28px;
+
+  overflow: visible;
+}
+
+/* Header inside performance card */
+.portfolio-performance-header {
+  position: relative;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  margin-bottom: 22px;
+}
+
+.portfolio-performance-header h2 {
+  margin: 0 0 7px;
+  line-height: 1.25;
+}
+
+.portfolio-performance-header p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* =====================================================
+   REMOVE OLD PERIOD SELECTOR VISUALLY
+===================================================== */
+
+/*
+   The JSX still contains the 1M / 3M / 6M / 1Y buttons.
+   Hide them because we no longer want that selector.
+*/
+
+.portfolio-period-selector {
+  display: none !important;
+}
+
+/* =====================================================
+   PERFORMANCE LEGEND
+===================================================== */
+
+.portfolio-chart-legend {
+  display: flex;
+  align-items: center;
+
+  gap: 22px;
+
+  margin: 0 0 16px;
+
+  padding: 0;
+}
+
+.portfolio-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  white-space: nowrap;
+}
+
+/* =====================================================
+   PERFORMANCE CHART AREA
+===================================================== */
+
+.portfolio-history-chart {
+  position: relative;
+
+  width: 100%;
+
+  min-height: 310px;
+
+  margin-top: 12px;
+
+  padding: 22px 14px 34px;
+
+  overflow: visible;
+}
+
+/* =====================================================
+   HISTORY GRAPH
+===================================================== */
+
+.portfolio-history-bars {
+  height: 245px;
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+
+  gap: 10px;
+
+  padding: 0 12px;
+
+  border-bottom: 1px solid
+    rgba(120, 140, 160, 0.22);
+}
+
+/* Individual date column */
+.portfolio-history-column {
+  position: relative;
+
+  flex: 1;
+
+  min-width: 24px;
+  max-width: 70px;
+
+  height: 245px;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: flex-end;
+  align-items: center;
+
+  cursor: pointer;
+}
+
+/* Date labels */
+.portfolio-history-column > span {
+  position: absolute;
+
+  bottom: -27px;
+
+  font-size: 10px;
+
+  white-space: nowrap;
+
+  opacity: 0.65;
+}
+
+/* Bars inside each date */
+.portfolio-history-column .portfolio-history-bars {
+  height: 220px;
+
+  width: 100%;
+
+  display: flex;
+  flex-direction: row;
+
+  align-items: flex-end;
+  justify-content: center;
+
+  gap: 5px;
+
+  padding: 0;
+
+  border: none;
+}
+
+/* Individual graph bars */
+.portfolio-history-bar {
+  width: 42%;
+
+  max-width: 20px;
+
+  min-height: 3px;
+
+  border-radius: 6px 6px 0 0;
+
+  transform-origin: bottom;
+
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* Short term */
+.portfolio-history-bar.short {
+  background: #70a7df;
+}
+
+/* Long term */
+.portfolio-history-bar.long {
+  background: #2878ce;
+}
+
+/* Hover */
+.portfolio-history-column:hover
+.portfolio-history-bar {
+  transform: translateY(-4px) scaleY(1.03);
+
+  filter: brightness(1.08);
+}
+
+/* =====================================================
+   TOOLTIP
+===================================================== */
+
+.portfolio-chart-tooltip {
+  position: absolute;
+
+  top: 10px;
+  right: 14px;
+
+  z-index: 20;
+
+  min-width: 220px;
+
+  padding: 15px 18px;
+
+  border-radius: 12px;
+
+  background: rgba(20, 35, 55, 0.96);
+
+  color: white;
+
+  box-shadow:
+    0 14px 35px rgba(0, 0, 0, 0.18);
+}
+
+/* =====================================================
+   MY HOLDINGS SECTION
+===================================================== */
+
+.portfolio-holdings-section {
+  position: relative;
+  z-index: 2;
+
+  width: 100%;
+
+  margin-top: 58px;
+
+  padding-top: 4px;
+
+  clear: both;
+}
+
+/* MY HOLDINGS label */
+.portfolio-holdings-section > .performance-label {
+  display: block;
+
+  margin: 0 0 8px;
+
+  position: relative;
+  z-index: 3;
+}
+
+/* YOUR INVESTMENTS heading */
+.portfolio-holdings-section > h2 {
+  position: relative;
+  z-index: 3;
+
+  margin: 0 0 22px;
+
+  font-size: 28px;
+
+  line-height: 1.25;
+
+  color: #092d5c;
+}
+
+/* =====================================================
+   SORT CONTROLS
+===================================================== */
+
+.portfolio-holdings-controls {
+  position: relative;
+  z-index: 3;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  width: 100%;
+
+  margin: 0 0 24px;
+
+  padding: 0;
+}
+
+.portfolio-holdings-controls > span {
+  font-size: 13px;
+
+  white-space: nowrap;
+
+  opacity: 0.7;
+}
+
+.portfolio-holdings-controls select {
+  min-width: 155px;
+
+  height: 40px;
+
+  padding: 0 12px;
+
+  border: 1px solid
+    rgba(120, 140, 160, 0.25);
+
+  border-radius: 9px;
+
+  background: white;
+
+  color: #183b64;
+
+  font-size: 13px;
+
+  outline: none;
+
+  cursor: pointer;
+}
+
+.portfolio-holdings-controls select:focus {
+  border-color: #2878ce;
+
+  box-shadow:
+    0 0 0 3px
+      rgba(40, 120, 206, 0.1);
+}
+
+/* =====================================================
+   HOLDINGS LIST
+===================================================== */
+
+.portfolio-holdings-list {
+  position: relative;
+  z-index: 2;
+
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+
+  clear: both;
+}
+
+/* =====================================================
+   HOLDING CARD
+===================================================== */
+
+.portfolio-holding-card {
+  position: relative;
+  z-index: 2;
+
+  width: 100%;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 16px;
+
+  padding: 24px;
+
+  overflow: hidden;
+}
+
+/* =====================================================
+   HOLDING HEADER
+===================================================== */
+
+.portfolio-holding-header {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  margin-bottom: 20px;
+}
+
+.portfolio-holding-header h3 {
+  margin: 0 0 6px;
+
+  line-height: 1.3;
+}
+
+.portfolio-holding-header p {
+  margin: 0;
+
+  line-height: 1.4;
+}
+
+/* Badges */
+.portfolio-holding-badges {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  flex-shrink: 0;
+
+  flex-wrap: wrap;
+}
+
+/* =====================================================
+   HOLDING MAIN VALUE
+===================================================== */
+
+.portfolio-holding-main {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  margin: 20px 0;
+
+  padding: 18px 0;
+
+  border-top: 1px solid
+    rgba(120, 140, 160, 0.14);
+
+  border-bottom: 1px solid
+    rgba(120, 140, 160, 0.14);
+}
+
+.portfolio-holding-flow {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  font-size: 19px;
+
+  white-space: nowrap;
+}
+
+.portfolio-holding-profit {
+  font-size: 16px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+/* =====================================================
+   HOLDING DETAILS
+===================================================== */
+
+.portfolio-holding-details {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 20px;
+
+  padding: 20px 0;
+
+  border-bottom: 1px solid
+    rgba(120, 140, 160, 0.14);
+}
+
+/* =====================================================
+   HOLDING FOOTER
+===================================================== */
+
+.portfolio-holding-footer {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding-top: 16px;
+
+  flex-wrap: wrap;
+
+  font-size: 12px;
+}
+
+/* =====================================================
+   DARK MODE
+===================================================== */
+
+.dark-mode .portfolio-holdings-section > h2 {
+  color: #f1f7ff;
+}
+
+.dark-mode .portfolio-holding-card {
+  background: #10345c;
+
+  border-color: #2c5880;
+}
+
+.dark-mode .portfolio-holdings-controls select {
+  background: #10345c;
+
+  color: #e4f1ff;
+
+  border-color: #315577;
+}
+
+.dark-mode .portfolio-holding-header p,
+.dark-mode .portfolio-holding-details span,
+.dark-mode .portfolio-holding-footer {
+  color: #9bb6d2;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 850px) {
+  .portfolio-page {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .portfolio-container {
+    width: 100%;
+  }
+
+  .portfolio-holdings-section {
+    margin-top: 48px;
+  }
+
+  .portfolio-holdings-controls {
+    justify-content: flex-start;
+  }
+
+  .portfolio-holding-details {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .portfolio-page {
+    padding: 28px 14px 60px;
+  }
+
+  .portfolio-holdings-section {
+    margin-top: 40px;
+  }
+
+  .portfolio-holdings-section > h2 {
+    font-size: 24px;
+  }
+
+  .portfolio-holdings-controls {
+    flex-wrap: wrap;
+
+    justify-content: flex-start;
+  }
+
+  .portfolio-holding-header {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+
+  .portfolio-holding-main {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+
+  .portfolio-holding-flow {
+    font-size: 17px;
+  }
+
+  .portfolio-holding-details {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-history-chart {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .portfolio-history-bars {
+    gap: 4px;
+
+    padding: 0 4px;
+  }
+
+  .portfolio-history-bar {
+    max-width: 12px;
+  }
+
+  .portfolio-chart-tooltip {
+    left: 5px;
+    right: 5px;
+
+    min-width: unset;
+  }
+}
 

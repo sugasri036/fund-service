@@ -2438,9 +2438,6 @@ export default function App() {
     const [error, setError] = useState("");
     const [holdingSort, setHoldingSort] = useState("newest");
 
-    const [performancePeriod, setPerformancePeriod] = useState("6M");
-    const [performanceHistory, setPerformanceHistory] = useState([]);
-    const [performanceLoading, setPerformanceLoading] = useState(false);
     const [performanceHover, setPerformanceHover] = useState(null);
 
     /* =====================================================
@@ -2464,201 +2461,6 @@ export default function App() {
 
       return () => clearInterval(interval);
     }, [currentUser?.id]);
-
-    /* =====================================================
-     PORTFOLIO PERFORMANCE DATE RANGE
-  ===================================================== */
-
-    function getPerformanceDateRange(selectedPeriod) {
-      const endDate = new Date();
-      const startDate = new Date(endDate);
-
-      if (selectedPeriod === "1M") {
-        startDate.setMonth(startDate.getMonth() - 1);
-      } else if (selectedPeriod === "3M") {
-        startDate.setMonth(startDate.getMonth() - 3);
-      } else if (selectedPeriod === "6M") {
-        startDate.setMonth(startDate.getMonth() - 6);
-      } else {
-        startDate.setFullYear(startDate.getFullYear() - 1);
-      }
-
-      return {
-        startDate: startDate.toISOString().slice(0, 10),
-        endDate: endDate.toISOString().slice(0, 10),
-      };
-    }
-
-    /* =====================================================
-     LOAD PORTFOLIO PERFORMANCE HISTORY
-  ===================================================== */
-
-    async function loadPerformanceHistory() {
-      setPerformanceLoading(true);
-      setPerformanceHover(null);
-
-      try {
-        const { startDate, endDate } =
-          getPerformanceDateRange(performancePeriod);
-
-        const uniqueFundIds = [
-          ...new Set(orders.map((order) => String(order.fundId))),
-        ];
-
-        const historyResults = await Promise.all(
-          uniqueFundIds.map(async (fundId) => {
-            try {
-              const response = await fetch(
-                `${API_BASE_URL}/api/funds/${fundId}/nav-history?startDate=${startDate}&endDate=${endDate}`,
-              );
-
-              if (!response.ok) {
-                return {
-                  fundId,
-                  history: [],
-                };
-              }
-
-              const data = await response.json();
-
-              const rawHistory = Array.isArray(data)
-                ? data
-                : data.content || data.navHistory || data.history || [];
-
-              const history = rawHistory
-                .map((item) => ({
-                  date: item.navDate || item.date || item.nav_date,
-
-                  nav: Number(item.nav ?? item.value ?? item.NAV ?? 0),
-                }))
-                .filter((item) => item.date && Number.isFinite(item.nav))
-                .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-              return {
-                fundId,
-                history,
-              };
-            } catch (error) {
-              console.error(
-                `Performance history error for fund ${fundId}:`,
-                error,
-              );
-
-              return {
-                fundId,
-                history: [],
-              };
-            }
-          }),
-        );
-
-        /* =====================================================
-         CREATE HISTORY MAP
-      ===================================================== */
-
-        const historyMap = new Map(
-          historyResults.map((item) => [item.fundId, item.history]),
-        );
-
-        /* =====================================================
-         GET ALL AVAILABLE DATES
-      ===================================================== */
-
-        const allDates = [
-          ...new Set(
-            historyResults.flatMap((item) =>
-              item.history.map((point) => point.date),
-            ),
-          ),
-        ].sort((a, b) => new Date(a) - new Date(b));
-
-        /* =====================================================
-         FIND NAV FOR DATE
-      ===================================================== */
-
-        const getNavForDate = (history, targetDate) => {
-          if (!history?.length) {
-            return null;
-          }
-
-          let selected = null;
-
-          for (const point of history) {
-            if (new Date(point.date) <= new Date(targetDate)) {
-              selected = point;
-            } else {
-              break;
-            }
-          }
-
-          return selected?.nav ?? null;
-        };
-
-        /* =====================================================
-         CALCULATE PERFORMANCE HISTORY
-      ===================================================== */
-
-        const calculatedHistory = allDates.map((date) => {
-          let shortTermValue = 0;
-          let longTermValue = 0;
-
-          orders.forEach((order) => {
-            const history = historyMap.get(String(order.fundId)) || [];
-
-            const nav = getNavForDate(history, date);
-
-            if (nav === null) {
-              return;
-            }
-
-            const units = Number(order.units || 0);
-
-            const value = units * nav;
-
-            const horizon = String(order.investmentHorizon || "").toUpperCase();
-
-            if (horizon === "SHORT_TERM") {
-              shortTermValue += value;
-            }
-
-            if (horizon === "LONG_TERM") {
-              longTermValue += value;
-            }
-          });
-
-          return {
-            date,
-            shortTermValue,
-            longTermValue,
-          };
-        });
-
-        setPerformanceHistory(calculatedHistory);
-      } catch (error) {
-        console.error("Portfolio performance error:", error);
-
-        setPerformanceHistory([]);
-      } finally {
-        setPerformanceLoading(false);
-      }
-    }
-
-    /* =====================================================
-     PERFORMANCE HISTORY EFFECT
-
-     IMPORTANT:
-     This MUST be directly inside PortfolioPage.
-     It must NOT be inside loadPortfolio().
-  ===================================================== */
-
-    useEffect(() => {
-      if (!orders.length) {
-        setPerformanceHistory([]);
-        return;
-      }
-
-      loadPerformanceHistory();
-    }, [orders, performancePeriod]);
 
     /* =====================================================
      LOAD PORTFOLIO
@@ -2779,11 +2581,9 @@ export default function App() {
 
     const sortedOrders = [...orders].sort((a, b) => {
       const aInvested = Number(a.amount || 0);
-
       const bInvested = Number(b.amount || 0);
 
       const aProfit = Number(a.profitLoss || 0);
-
       const bProfit = Number(b.profitLoss || 0);
 
       const aReturn = aInvested > 0 ? (aProfit / aInvested) * 100 : 0;
@@ -2911,19 +2711,25 @@ export default function App() {
     const shortTermDash = (shortTermPercentage / 100) * donutCircumference;
 
     /* =========================================
-     PERFORMANCE BAR GRAPH
+     INVESTMENT SPIKE GRAPH
+
+     Each holding has:
+     - Invested amount
+     - Current value
+
+     This graph does NOT use NAV history.
   ========================================== */
 
     const performanceMax = Math.max(
-      shortTermInvested,
-      shortTermCurrentValue,
-      longTermInvested,
-      longTermCurrentValue,
+      ...orders.flatMap((order) => [
+        Number(order.amount || 0),
+        Number(order.currentValue || 0),
+      ]),
       1,
     );
 
-    const getBarHeight = (value) => {
-      return (Number(value || 0) / performanceMax) * 180;
+    const getPerformanceBarHeight = (value) => {
+      return (Number(value || 0) / performanceMax) * 230;
     };
 
     /* =========================================
@@ -3045,7 +2851,14 @@ export default function App() {
               ====================================== */}
 
               <section className="portfolio-analysis-section">
-                <div className="performance-label">INVESTMENT ALLOCATION</div>
+                <div
+                  className="performance-label"
+                  style={{
+                    marginBottom: "18px",
+                  }}
+                >
+                  INVESTMENT ALLOCATION
+                </div>
 
                 <div className="portfolio-allocation-grid">
                   {/* DONUT */}
@@ -3177,163 +2990,219 @@ export default function App() {
               </section>
 
               {/* =====================================
-                  PERFORMANCE
+                  INVESTMENT PERFORMANCE
               ====================================== */}
 
-              <section className="portfolio-analysis-section">
-                <div className="performance-label">INVESTMENT PERFORMANCE</div>
+              <section
+                className="portfolio-analysis-section"
+                style={{
+                  marginTop: "38px",
+                  marginBottom: "42px",
+                }}
+              >
+                <div
+                  className="performance-label"
+                  style={{
+                    marginBottom: "10px",
+                  }}
+                >
+                  INVESTMENT PERFORMANCE
+                </div>
 
-                <div className="portfolio-performance-card">
-                  <div className="portfolio-performance-header">
+                <div
+                  className="portfolio-performance-card"
+                  style={{
+                    paddingTop: "24px",
+                    paddingBottom: "28px",
+                  }}
+                >
+                  <div
+                    className="portfolio-performance-header"
+                    style={{
+                      marginBottom: "18px",
+                    }}
+                  >
                     <div>
-                      <h2>Money Flow Over Time</h2>
+                      <h2>Investment Value</h2>
 
                       <p>
-                        Track how your short-term and long-term investments have
-                        changed.
+                        Compare the amount invested with the current value of
+                        your holdings.
                       </p>
                     </div>
-
-                    <div className="portfolio-period-selector">
-                      {[
-                        ["1M", "1 Month"],
-                        ["3M", "3 Months"],
-                        ["6M", "6 Months"],
-                        ["1Y", "1 Year"],
-                      ].map(([value, label]) => (
-                        <button
-                          key={value}
-                          className={
-                            performancePeriod === value ? "active" : ""
-                          }
-                          onClick={() => setPerformancePeriod(value)}
-                        >
-                          {value}
-                        </button>
-                      ))}
-                    </div>
                   </div>
+
+                  {/* GRAPH LEGEND */}
 
                   <div className="portfolio-chart-legend">
                     <span>
                       <i className="legend-bar short" />
-                      Short Term
+                      Invested
                     </span>
 
                     <span>
                       <i className="legend-bar long" />
-                      Long Term
+                      Current Value
                     </span>
                   </div>
 
-                  {performanceLoading ? (
-                    <div className="portfolio-chart-loading">
-                      <div className="loading-spinner" />
+                  {/* SPIKE GRAPH */}
 
-                      <span>Loading performance...</span>
-                    </div>
-                  ) : performanceHistory.length === 0 ? (
-                    <div className="portfolio-chart-empty">
-                      NAV history is not available for this period.
-                    </div>
-                  ) : (
-                    <div className="portfolio-history-chart">
-                      <div className="portfolio-history-bars">
-                        {performanceHistory
-                          .filter((_, index) => {
-                            const step = Math.max(
-                              1,
-                              Math.ceil(performanceHistory.length / 14),
-                            );
+                  <div
+                    className="portfolio-history-chart"
+                    style={{
+                      minHeight: "330px",
+                      paddingTop: "20px",
+                      paddingBottom: "12px",
+                    }}
+                  >
+                    <div
+                      className="portfolio-history-bars"
+                      style={{
+                        minHeight: "280px",
+                        alignItems: "flex-end",
+                        justifyContent: "space-evenly",
+                        gap: "18px",
+                        padding: "20px 24px 0",
+                      }}
+                    >
+                      {orders.map((order) => {
+                        const invested = Number(order.amount || 0);
 
-                            return index % step === 0;
-                          })
-                          .map((point) => {
-                            const maxValue = Math.max(
-                              ...performanceHistory.map((item) =>
-                                Math.max(
-                                  item.shortTermValue,
-                                  item.longTermValue,
-                                ),
-                              ),
-                              1,
-                            );
+                        const current = Number(order.currentValue || 0);
 
-                            const shortHeight =
-                              (point.shortTermValue / maxValue) * 220;
+                        const profitLoss = current - invested;
 
-                            const longHeight =
-                              (point.longTermValue / maxValue) * 220;
+                        const investedHeight =
+                          getPerformanceBarHeight(invested);
 
-                            return (
+                        const currentHeight = getPerformanceBarHeight(current);
+
+                        const fundName =
+                          order.fundName || `Fund ${order.fundId}`;
+
+                        return (
+                          <div
+                            className="portfolio-history-column"
+                            key={order.id || order.orderId}
+                            onMouseEnter={() => setPerformanceHover(order)}
+                            onMouseLeave={() => setPerformanceHover(null)}
+                            style={{
+                              minWidth: "72px",
+                              flex: "1 1 0",
+                              maxWidth: "130px",
+                              height: "280px",
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: "flex-end",
+                              alignItems: "center",
+                              position: "relative",
+                            }}
+                          >
+                            {/* BAR AREA */}
+
+                            <div
+                              style={{
+                                height: "235px",
+                                width: "100%",
+                                display: "flex",
+                                alignItems: "flex-end",
+                                justifyContent: "center",
+                                gap: "7px",
+                              }}
+                            >
+                              {/* INVESTED */}
+
                               <div
-                                className="portfolio-history-column"
-                                key={point.date}
-                                onMouseEnter={() => setPerformanceHover(point)}
-                                onMouseLeave={() => setPerformanceHover(null)}
-                              >
-                                <div className="portfolio-history-bars">
-                                  <div
-                                    className="portfolio-history-bar short"
-                                    style={{
-                                      height: `${Math.max(shortHeight, 2)}px`,
-                                    }}
-                                  />
+                                className="portfolio-history-bar short"
+                                style={{
+                                  height: `${Math.max(investedHeight, 4)}px`,
+                                  width: "22px",
+                                  borderRadius: "7px 7px 0 0",
+                                  transition: "height 0.3s ease",
+                                }}
+                              />
 
-                                  <div
-                                    className="portfolio-history-bar long"
-                                    style={{
-                                      height: `${Math.max(longHeight, 2)}px`,
-                                    }}
-                                  />
+                              {/* CURRENT VALUE */}
+
+                              <div
+                                className="portfolio-history-bar long"
+                                style={{
+                                  height: `${Math.max(currentHeight, 4)}px`,
+                                  width: "22px",
+                                  borderRadius: "7px 7px 0 0",
+                                  transition: "height 0.3s ease",
+                                }}
+                              />
+                            </div>
+
+                            {/* FUND LABEL */}
+
+                            <span
+                              style={{
+                                marginTop: "12px",
+                                width: "100%",
+                                textAlign: "center",
+                                fontSize: "12px",
+                                lineHeight: "1.3",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                              title={fundName}
+                            >
+                              {fundName}
+                            </span>
+
+                            {/* HOVER TOOLTIP */}
+
+                            {performanceHover === order && (
+                              <div
+                                className="portfolio-chart-tooltip"
+                                style={{
+                                  zIndex: 20,
+                                  bottom: "110px",
+                                  left: "50%",
+                                  transform: "translateX(-50%)",
+                                  minWidth: "220px",
+                                }}
+                              >
+                                <strong>{fundName}</strong>
+
+                                <div>
+                                  <span className="tooltip-dot short" />
+                                  Invested
+                                  <strong>{formatCurrency(invested)}</strong>
                                 </div>
 
-                                <span>
-                                  {new Date(point.date).toLocaleDateString(
-                                    "en-IN",
-                                    {
-                                      day: "2-digit",
-                                      month: "short",
-                                    },
-                                  )}
-                                </span>
+                                <div>
+                                  <span className="tooltip-dot long" />
+                                  Current Value
+                                  <strong>{formatCurrency(current)}</strong>
+                                </div>
+
+                                <div
+                                  className={
+                                    profitLoss >= 0 ? "positive" : "negative"
+                                  }
+                                  style={{
+                                    marginTop: "6px",
+                                  }}
+                                >
+                                  Profit / Loss
+                                  <strong>
+                                    {profitLoss >= 0 ? "+" : ""}
+
+                                    {formatCurrency(profitLoss)}
+                                  </strong>
+                                </div>
                               </div>
-                            );
-                          })}
-                      </div>
-
-                      {performanceHover && (
-                        <div className="portfolio-chart-tooltip">
-                          <strong>
-                            {new Date(performanceHover.date).toLocaleDateString(
-                              "en-IN",
-                              {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              },
                             )}
-                          </strong>
-
-                          <div>
-                            <span className="tooltip-dot short" />
-                            Short Term
-                            <strong>
-                              {formatCurrency(performanceHover.shortTermValue)}
-                            </strong>
                           </div>
-
-                          <div>
-                            <span className="tooltip-dot long" />
-                            Long Term
-                            <strong>
-                              {formatCurrency(performanceHover.longTermValue)}
-                            </strong>
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })}
                     </div>
-                  )}
+                  </div>
                 </div>
               </section>
 
@@ -3341,12 +3210,60 @@ export default function App() {
                   HOLDINGS
               ====================================== */}
 
-              <section className="portfolio-holdings-section">
-                <div className="performance-label">MY HOLDINGS</div>
+              <section
+                className="portfolio-holdings-section"
+                style={{
+                  marginTop: "45px",
+                  paddingTop: "5px",
+                  position: "relative",
+                  zIndex: 2,
+                }}
+              >
+                {/* HOLDINGS HEADING */}
 
-                <h2>Your Investments</h2>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    marginBottom: "24px",
+                    position: "relative",
+                    zIndex: 3,
+                  }}
+                >
+                  <div
+                    className="performance-label"
+                    style={{
+                      margin: 0,
+                    }}
+                  >
+                    MY HOLDINGS
+                  </div>
 
-                <div className="portfolio-holdings-controls">
+                  <h2
+                    style={{
+                      margin: 0,
+                      lineHeight: "1.2",
+                    }}
+                  >
+                    Your Investments
+                  </h2>
+                </div>
+
+                {/* SORT */}
+
+                <div
+                  className="portfolio-holdings-controls"
+                  style={{
+                    marginBottom: "25px",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    gap: "10px",
+                    position: "relative",
+                    zIndex: 3,
+                  }}
+                >
                   <span>Sort holdings:</span>
 
                   <select
@@ -3366,6 +3283,8 @@ export default function App() {
                     <option value="lowestReturn">Lowest Return %</option>
                   </select>
                 </div>
+
+                {/* HOLDINGS LIST */}
 
                 <div className="portfolio-holdings-list">
                   {sortedOrders.map((order) => {
@@ -3391,6 +3310,8 @@ export default function App() {
                         className="portfolio-holding-card"
                         key={order.id || order.orderId}
                       >
+                        {/* HOLDING HEADER */}
+
                         <div className="portfolio-holding-header">
                           <div>
                             <h3>
@@ -3420,6 +3341,8 @@ export default function App() {
                             <span className="order-status paid">COMPLETED</span>
                           </div>
                         </div>
+
+                        {/* HOLDING FLOW */}
 
                         <div className="portfolio-holding-main">
                           <div className="portfolio-holding-flow">
@@ -3451,6 +3374,8 @@ export default function App() {
                           </div>
                         </div>
 
+                        {/* HOLDING DETAILS */}
+
                         <div className="portfolio-holding-details">
                           <div>
                             <span>Invested</span>
@@ -3477,6 +3402,8 @@ export default function App() {
                           </div>
                         </div>
 
+                        {/* PROFIT */}
+
                         <div className="portfolio-profit-row">
                           <span>Profit / Loss</span>
 
@@ -3498,6 +3425,8 @@ export default function App() {
                             {"%)"}
                           </strong>
                         </div>
+
+                        {/* FOOTER */}
 
                         <div className="portfolio-holding-footer">
                           <span>Order ID: {order.orderId || "—"}</span>
