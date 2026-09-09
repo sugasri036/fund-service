@@ -2439,12 +2439,13 @@ export default function App() {
     const [holdingSort, setHoldingSort] = useState("newest");
 
     const [performancePeriod, setPerformancePeriod] = useState("6M");
-
     const [performanceHistory, setPerformanceHistory] = useState([]);
-
     const [performanceLoading, setPerformanceLoading] = useState(false);
-
     const [performanceHover, setPerformanceHover] = useState(null);
+
+    /* =====================================================
+     LOAD PORTFOLIO WHEN USER CHANGES
+  ===================================================== */
 
     useEffect(() => {
       if (!currentUser?.id) {
@@ -2464,181 +2465,214 @@ export default function App() {
       return () => clearInterval(interval);
     }, [currentUser?.id]);
 
-    async function loadPortfolio() {
-      setLoading(true);
-      setError("");
+    /* =====================================================
+     PORTFOLIO PERFORMANCE DATE RANGE
+  ===================================================== */
 
-      /* =====================================================
-   PORTFOLIO PERFORMANCE HISTORY
-===================================================== */
+    function getPerformanceDateRange(selectedPeriod) {
+      const endDate = new Date();
+      const startDate = new Date(endDate);
 
-      function getPerformanceDateRange(selectedPeriod) {
-        const endDate = new Date();
-        const startDate = new Date(endDate);
-
-        if (selectedPeriod === "1M") {
-          startDate.setMonth(startDate.getMonth() - 1);
-        } else if (selectedPeriod === "3M") {
-          startDate.setMonth(startDate.getMonth() - 3);
-        } else if (selectedPeriod === "6M") {
-          startDate.setMonth(startDate.getMonth() - 6);
-        } else {
-          startDate.setFullYear(startDate.getFullYear() - 1);
-        }
-
-        return {
-          startDate: startDate.toISOString().slice(0, 10),
-
-          endDate: endDate.toISOString().slice(0, 10),
-        };
+      if (selectedPeriod === "1M") {
+        startDate.setMonth(startDate.getMonth() - 1);
+      } else if (selectedPeriod === "3M") {
+        startDate.setMonth(startDate.getMonth() - 3);
+      } else if (selectedPeriod === "6M") {
+        startDate.setMonth(startDate.getMonth() - 6);
+      } else {
+        startDate.setFullYear(startDate.getFullYear() - 1);
       }
 
-      useEffect(() => {
-        if (!orders.length) {
-          setPerformanceHistory([]);
-          return;
-        }
+      return {
+        startDate: startDate.toISOString().slice(0, 10),
+        endDate: endDate.toISOString().slice(0, 10),
+      };
+    }
 
-        loadPerformanceHistory();
-      }, [orders, performancePeriod]);
+    /* =====================================================
+     LOAD PORTFOLIO PERFORMANCE HISTORY
+  ===================================================== */
 
-      async function loadPerformanceHistory() {
-        setPerformanceLoading(true);
-        setPerformanceHover(null);
+    async function loadPerformanceHistory() {
+      setPerformanceLoading(true);
+      setPerformanceHover(null);
 
-        try {
-          const { startDate, endDate } =
-            getPerformanceDateRange(performancePeriod);
+      try {
+        const { startDate, endDate } =
+          getPerformanceDateRange(performancePeriod);
 
-          const uniqueFundIds = [
-            ...new Set(orders.map((order) => String(order.fundId))),
-          ];
+        const uniqueFundIds = [
+          ...new Set(orders.map((order) => String(order.fundId))),
+        ];
 
-          const historyResults = await Promise.all(
-            uniqueFundIds.map(async (fundId) => {
-              try {
-                const response = await fetch(
-                  `${API_BASE_URL}/api/funds/${fundId}/nav-history?startDate=${startDate}&endDate=${endDate}`,
-                );
+        const historyResults = await Promise.all(
+          uniqueFundIds.map(async (fundId) => {
+            try {
+              const response = await fetch(
+                `${API_BASE_URL}/api/funds/${fundId}/nav-history?startDate=${startDate}&endDate=${endDate}`,
+              );
 
-                if (!response.ok) {
-                  return {
-                    fundId,
-                    history: [],
-                  };
-                }
-
-                const data = await response.json();
-
-                const rawHistory = Array.isArray(data)
-                  ? data
-                  : data.content || data.navHistory || data.history || [];
-
-                const history = rawHistory
-                  .map((item) => ({
-                    date: item.navDate || item.date || item.nav_date,
-
-                    nav: Number(item.nav ?? item.value ?? item.NAV ?? 0),
-                  }))
-                  .filter((item) => item.date && Number.isFinite(item.nav))
-                  .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                return {
-                  fundId,
-                  history,
-                };
-              } catch (error) {
-                console.error(
-                  `Performance history error for fund ${fundId}:`,
-                  error,
-                );
-
+              if (!response.ok) {
                 return {
                   fundId,
                   history: [],
                 };
               }
-            }),
-          );
 
-          const historyMap = new Map(
-            historyResults.map((item) => [item.fundId, item.history]),
-          );
+              const data = await response.json();
 
-          const allDates = [
-            ...new Set(
-              historyResults.flatMap((item) =>
-                item.history.map((point) => point.date),
-              ),
+              const rawHistory = Array.isArray(data)
+                ? data
+                : data.content || data.navHistory || data.history || [];
+
+              const history = rawHistory
+                .map((item) => ({
+                  date: item.navDate || item.date || item.nav_date,
+
+                  nav: Number(item.nav ?? item.value ?? item.NAV ?? 0),
+                }))
+                .filter((item) => item.date && Number.isFinite(item.nav))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+              return {
+                fundId,
+                history,
+              };
+            } catch (error) {
+              console.error(
+                `Performance history error for fund ${fundId}:`,
+                error,
+              );
+
+              return {
+                fundId,
+                history: [],
+              };
+            }
+          }),
+        );
+
+        /* =====================================================
+         CREATE HISTORY MAP
+      ===================================================== */
+
+        const historyMap = new Map(
+          historyResults.map((item) => [item.fundId, item.history]),
+        );
+
+        /* =====================================================
+         GET ALL AVAILABLE DATES
+      ===================================================== */
+
+        const allDates = [
+          ...new Set(
+            historyResults.flatMap((item) =>
+              item.history.map((point) => point.date),
             ),
-          ].sort((a, b) => new Date(a) - new Date(b));
+          ),
+        ].sort((a, b) => new Date(a) - new Date(b));
 
-          const getNavForDate = (history, targetDate) => {
-            if (!history?.length) {
-              return null;
+        /* =====================================================
+         FIND NAV FOR DATE
+      ===================================================== */
+
+        const getNavForDate = (history, targetDate) => {
+          if (!history?.length) {
+            return null;
+          }
+
+          let selected = null;
+
+          for (const point of history) {
+            if (new Date(point.date) <= new Date(targetDate)) {
+              selected = point;
+            } else {
+              break;
+            }
+          }
+
+          return selected?.nav ?? null;
+        };
+
+        /* =====================================================
+         CALCULATE PERFORMANCE HISTORY
+      ===================================================== */
+
+        const calculatedHistory = allDates.map((date) => {
+          let shortTermValue = 0;
+          let longTermValue = 0;
+
+          orders.forEach((order) => {
+            const history = historyMap.get(String(order.fundId)) || [];
+
+            const nav = getNavForDate(history, date);
+
+            if (nav === null) {
+              return;
             }
 
-            let selected = null;
+            const units = Number(order.units || 0);
 
-            for (const point of history) {
-              if (new Date(point.date) <= new Date(targetDate)) {
-                selected = point;
-              } else {
-                break;
-              }
+            const value = units * nav;
+
+            const horizon = String(order.investmentHorizon || "").toUpperCase();
+
+            if (horizon === "SHORT_TERM") {
+              shortTermValue += value;
             }
 
-            return selected?.nav ?? null;
-          };
-
-          const calculatedHistory = allDates.map((date) => {
-            let shortTermValue = 0;
-            let longTermValue = 0;
-
-            orders.forEach((order) => {
-              const history = historyMap.get(String(order.fundId)) || [];
-
-              const nav = getNavForDate(history, date);
-
-              if (nav === null) {
-                return;
-              }
-
-              const units = Number(order.units || 0);
-
-              const value = units * nav;
-
-              const horizon = String(
-                order.investmentHorizon || "",
-              ).toUpperCase();
-
-              if (horizon === "SHORT_TERM") {
-                shortTermValue += value;
-              }
-
-              if (horizon === "LONG_TERM") {
-                longTermValue += value;
-              }
-            });
-
-            return {
-              date,
-              shortTermValue,
-              longTermValue,
-            };
+            if (horizon === "LONG_TERM") {
+              longTermValue += value;
+            }
           });
 
-          setPerformanceHistory(calculatedHistory);
-        } catch (error) {
-          console.error("Portfolio performance error:", error);
+          return {
+            date,
+            shortTermValue,
+            longTermValue,
+          };
+        });
 
-          setPerformanceHistory([]);
-        } finally {
-          setPerformanceLoading(false);
-        }
+        setPerformanceHistory(calculatedHistory);
+      } catch (error) {
+        console.error("Portfolio performance error:", error);
+
+        setPerformanceHistory([]);
+      } finally {
+        setPerformanceLoading(false);
+      }
+    }
+
+    /* =====================================================
+     PERFORMANCE HISTORY EFFECT
+
+     IMPORTANT:
+     This MUST be directly inside PortfolioPage.
+     It must NOT be inside loadPortfolio().
+  ===================================================== */
+
+    useEffect(() => {
+      if (!orders.length) {
+        setPerformanceHistory([]);
+        return;
       }
 
+      loadPerformanceHistory();
+    }, [orders, performancePeriod]);
+
+    /* =====================================================
+     LOAD PORTFOLIO
+  ===================================================== */
+
+    async function loadPortfolio() {
+      setLoading(true);
+      setError("");
+
       try {
+        /* =========================================
+         GET USER ORDERS
+      ========================================== */
+
         const ordersResponse = await fetch(
           `${API_BASE_URL}/api/orders/user/${encodeURIComponent(
             String(currentUser?.id),
@@ -2668,52 +2702,13 @@ export default function App() {
           ? ordersData
           : ordersData.content || [];
 
+        /* =========================================
+         ONLY COMPLETED ORDERS
+      ========================================== */
+
         const completedOrders = orderList.filter(
           (order) => String(order.status || "").toUpperCase() === "COMPLETED",
         );
-
-        /* =====================================================
-   SORT HOLDINGS
-===================================================== */
-
-        const sortedOrders = [...orders].sort((a, b) => {
-          const aInvested = Number(a.amount || 0);
-
-          const bInvested = Number(b.amount || 0);
-
-          const aProfit = Number(a.profitLoss || 0);
-
-          const bProfit = Number(b.profitLoss || 0);
-
-          const aReturn = aInvested > 0 ? (aProfit / aInvested) * 100 : 0;
-
-          const bReturn = bInvested > 0 ? (bProfit / bInvested) * 100 : 0;
-
-          const aDate = new Date(a.completedAt || a.createdAt || 0).getTime();
-
-          const bDate = new Date(b.completedAt || b.createdAt || 0).getTime();
-
-          switch (holdingSort) {
-            case "oldest":
-              return aDate - bDate;
-
-            case "highestProfit":
-              return bProfit - aProfit;
-
-            case "lowestProfit":
-              return aProfit - bProfit;
-
-            case "highestReturn":
-              return bReturn - aReturn;
-
-            case "lowestReturn":
-              return aReturn - bReturn;
-
-            case "newest":
-            default:
-              return bDate - aDate;
-          }
-        });
 
         /* =========================================
          GET LATEST FUND NAV
@@ -2777,6 +2772,49 @@ export default function App() {
         setLoading(false);
       }
     }
+
+    /* =====================================================
+     SORT HOLDINGS
+  ===================================================== */
+
+    const sortedOrders = [...orders].sort((a, b) => {
+      const aInvested = Number(a.amount || 0);
+
+      const bInvested = Number(b.amount || 0);
+
+      const aProfit = Number(a.profitLoss || 0);
+
+      const bProfit = Number(b.profitLoss || 0);
+
+      const aReturn = aInvested > 0 ? (aProfit / aInvested) * 100 : 0;
+
+      const bReturn = bInvested > 0 ? (bProfit / bInvested) * 100 : 0;
+
+      const aDate = new Date(a.completedAt || a.createdAt || 0).getTime();
+
+      const bDate = new Date(b.completedAt || b.createdAt || 0).getTime();
+
+      switch (holdingSort) {
+        case "oldest":
+          return aDate - bDate;
+
+        case "highestProfit":
+          return bProfit - aProfit;
+
+        case "lowestProfit":
+          return aProfit - bProfit;
+
+        case "highestReturn":
+          return bReturn - aReturn;
+
+        case "lowestReturn":
+          return aReturn - bReturn;
+
+        case "newest":
+        default:
+          return bDate - aDate;
+      }
+    });
 
     /* =========================================
      OVERALL PORTFOLIO
@@ -2865,6 +2903,7 @@ export default function App() {
   ========================================== */
 
     const donutRadius = 82;
+
     const donutCircumference = 2 * Math.PI * donutRadius;
 
     const longTermDash = (longTermPercentage / 100) * donutCircumference;
@@ -2887,6 +2926,10 @@ export default function App() {
       return (Number(value || 0) / performanceMax) * 180;
     };
 
+    /* =========================================
+     RENDER
+  ========================================== */
+
     return (
       <main className="portfolio-page">
         <div className="portfolio-container">
@@ -2904,6 +2947,10 @@ export default function App() {
             </div>
           </div>
 
+          {/* =====================================
+            LOADING
+        ====================================== */}
+
           {loading && (
             <div className="page-loading">
               <div className="loading-spinner" />
@@ -2911,6 +2958,10 @@ export default function App() {
               <span>Loading portfolio...</span>
             </div>
           )}
+
+          {/* =====================================
+            ERROR
+        ====================================== */}
 
           {!loading && error && (
             <div className="empty-state">
@@ -2926,6 +2977,10 @@ export default function App() {
             </div>
           )}
 
+          {/* =====================================
+            EMPTY PORTFOLIO
+        ====================================== */}
+
           {!loading && !error && orders.length === 0 && (
             <div className="empty-state">
               <div className="empty-icon">◈</div>
@@ -2935,6 +2990,10 @@ export default function App() {
               <p>Completed investments will appear here.</p>
             </div>
           )}
+
+          {/* =====================================
+            PORTFOLIO CONTENT
+        ====================================== */}
 
           {!loading && !error && orders.length > 0 && (
             <>
@@ -2962,6 +3021,7 @@ export default function App() {
                     className={totalProfitLoss >= 0 ? "positive" : "negative"}
                   >
                     {totalProfitLoss >= 0 ? "+" : ""}
+
                     {formatCurrency(totalProfitLoss)}
                   </strong>
                 </div>
@@ -3080,6 +3140,7 @@ export default function App() {
                         }
                       >
                         {longTermProfit >= 0 ? "+" : ""}
+
                         {formatCurrency(longTermProfit)}
                       </div>
                     </div>
@@ -3107,6 +3168,7 @@ export default function App() {
                         }
                       >
                         {shortTermProfit >= 0 ? "+" : ""}
+
                         {formatCurrency(shortTermProfit)}
                       </div>
                     </div>
@@ -3117,10 +3179,6 @@ export default function App() {
               {/* =====================================
                   PERFORMANCE
               ====================================== */}
-
-              {/* =====================================
-    PERFORMANCE
-===================================== */}
 
               <section className="portfolio-analysis-section">
                 <div className="performance-label">INVESTMENT PERFORMANCE</div>
@@ -3287,6 +3345,7 @@ export default function App() {
                 <div className="performance-label">MY HOLDINGS</div>
 
                 <h2>Your Investments</h2>
+
                 <div className="portfolio-holdings-controls">
                   <span>Sort holdings:</span>
 
@@ -3307,8 +3366,9 @@ export default function App() {
                     <option value="lowestReturn">Lowest Return %</option>
                   </select>
                 </div>
+
                 <div className="portfolio-holdings-list">
-                  {orders.map((order) => {
+                  {sortedOrders.map((order) => {
                     const invested = Number(order.amount || 0);
 
                     const units = Number(order.units || 0);
@@ -3378,6 +3438,7 @@ export default function App() {
                             }
                           >
                             {profitLoss >= 0 ? "+" : ""}
+
                             {formatCurrency(profitLoss)}
 
                             {" ("}
