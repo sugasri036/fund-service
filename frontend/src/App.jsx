@@ -6,6 +6,15 @@ import Register from "./Register";
    CONFIG
 ===================================================== */
 const API_BASE_URL = "https://api-gateway-rz13.onrender.com";
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token") || localStorage.getItem("jwt");
+
+  return token
+    ? {
+        Authorization: `Bearer ${token}`,
+      }
+    : {};
+};
 
 /* =====================================================
    SAMPLE FALLBACK DATA
@@ -1410,6 +1419,7 @@ export default function App() {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
+            ...getAuthHeaders(),
           },
 
           body: JSON.stringify({
@@ -1840,6 +1850,11 @@ export default function App() {
           `${API_BASE_URL}/api/orders/user/${encodeURIComponent(
             String(currentUser?.id),
           )}`,
+          {
+            headers: {
+              ...getAuthHeaders(),
+            },
+          },
         );
 
         const text = await response.text();
@@ -2171,6 +2186,11 @@ export default function App() {
             `${API_BASE_URL}/api/orders/${encodeURIComponent(
               initialOrder.orderId,
             )}`,
+            {
+              headers: {
+                ...getAuthHeaders(),
+              },
+            },
           );
 
           if (orderResponse.ok) {
@@ -2185,6 +2205,11 @@ export default function App() {
             `${API_BASE_URL}/api/payments/order/${encodeURIComponent(
               initialOrder.orderId,
             )}`,
+            {
+              headers: {
+                ...getAuthHeaders(),
+              },
+            },
           );
 
           if (paymentResponse.ok) {
@@ -2482,6 +2507,11 @@ export default function App() {
           `${API_BASE_URL}/api/orders/user/${encodeURIComponent(
             String(currentUser?.id),
           )}`,
+          {
+            headers: {
+              ...getAuthHeaders(),
+            },
+          },
         );
 
         const ordersText = await ordersResponse.text();
