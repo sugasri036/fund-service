@@ -103,11 +103,10 @@ public class NavUpdateScheduler {
                     // CALL EXTERNAL NAV API
                     // -----------------------------------------
 
-                    navHistoryImportService.importHistory(
-                            fund.getId(),
-                            fromDate.toString(),
-                            toDate.toString()
-                    );
+                    navHistoryImportService.updateLatestNav(
+        fund.getId(),
+        fund.getSchemeCode()
+);
 
                     System.out.println(
                             "NAV update completed for: "
