@@ -169,14 +169,15 @@ export default function App() {
     const token = params.get("token");
 
     if (token) {
-      console.log("Google login successful");
+  console.log("Google login successful");
 
-      localStorage.setItem("jwt", token);
+  localStorage.setItem("jwt", token);
+  localStorage.setItem("token", token);
 
-      setIsLoggedIn(true);
+  window.history.replaceState({}, document.title, "/");
 
-      window.history.replaceState({}, document.title, "/");
-    }
+  window.location.reload();
+}
   }, []);
 
   /* =====================================================
@@ -1512,10 +1513,10 @@ export default function App() {
                   method: "POST",
 
                   headers: {
-                    "Content-Type": "application/json",
-                    Accept: "application/json",
-                  },
-
+  "Content-Type": "application/json",
+  Accept: "application/json",
+  ...getAuthHeaders(),
+},
                   body: JSON.stringify({
                     razorpayOrderId: razorpayResponse.razorpay_order_id,
 
