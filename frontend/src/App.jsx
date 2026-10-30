@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import Login from "./Login";
 import Register from "./Register";
+import Chatbot from "./components/chatbot/Chatbot";
 /* =====================================================
    CONFIG
 ===================================================== */
@@ -4416,10 +4417,11 @@ export default function App() {
   ===================================================== */
 
   return (
-    <div className={`app ${darkMode ? "dark-mode" : ""}`}>
-      <Header />
+  <div className={`app ${darkMode ? "dark-mode" : ""}`}>
+    <Header />
 
-      {renderPage()}
-    </div>
-  );
-}
+    {renderPage()}
+
+    <Chatbot />
+  </div>
+);
