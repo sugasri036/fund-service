@@ -1,4 +1,3 @@
-
 .investra-chatbot {
   position: fixed;
   right: 28px;
@@ -7,7 +6,12 @@
   font-family: Inter, Arial, sans-serif;
 }
 
+/* Floating launcher */
+
 .chatbot-launcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 62px;
   height: 62px;
   border: none;
@@ -17,7 +21,9 @@
   font-size: 28px;
   box-shadow: 0 8px 28px rgba(11, 45, 99, 0.3);
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
 }
 
 .chatbot-launcher:hover {
@@ -28,15 +34,17 @@
   background: #174c89;
 }
 
+/* Chat window */
+
 .chatbot-window {
   position: absolute;
   right: 0;
   bottom: 78px;
+  display: flex;
+  flex-direction: column;
   width: 380px;
   height: 540px;
   max-height: calc(100vh - 130px);
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
   background: #ffffff;
   border: 1px solid #dce7f4;
@@ -50,16 +58,20 @@
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
+/* Header */
+
 .chatbot-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
   padding: 17px;
   background: #0b2d63;
   color: white;
@@ -85,12 +97,12 @@
   font-size: 20px;
 }
 
-.chatbot-brand h3 {
+.chatbot-brand-info h3 {
   margin: 0 0 5px;
   font-size: 16px;
 }
 
-.chatbot-brand span {
+.chatbot-brand-info span {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -105,12 +117,17 @@
   background: #52d69a;
 }
 
+/* Header buttons */
+
 .chatbot-header-actions {
   display: flex;
   gap: 7px;
 }
 
 .chatbot-header-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 30px;
   height: 30px;
   border: none;
@@ -121,10 +138,16 @@
   cursor: pointer;
 }
 
+.chatbot-header-actions button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .chatbot-header-actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Message container */
 
 .chatbot-messages {
   flex: 1;
@@ -132,6 +155,16 @@
   overflow-y: auto;
   padding: 18px 14px;
   background: #f6f9fd;
+  scroll-behavior: smooth;
+}
+
+.chatbot-messages::-webkit-scrollbar {
+  width: 5px;
+}
+
+.chatbot-messages::-webkit-scrollbar-thumb {
+  background: #cbd8e8;
+  border-radius: 10px;
 }
 
 .chatbot-date-label {
@@ -142,6 +175,8 @@
   text-align: center;
   letter-spacing: 1px;
 }
+
+/* Individual messages */
 
 .chatbot-message-row {
   display: flex;
@@ -184,10 +219,12 @@
   border-bottom-right-radius: 4px;
 }
 
+/* Typing indicator */
+
 .chatbot-typing {
   display: flex;
-  gap: 5px;
   align-items: center;
+  gap: 5px;
   padding: 17px;
 }
 
@@ -214,8 +251,11 @@
   }
 }
 
+/* Input area */
+
 .chatbot-input-area {
   display: flex;
+  flex-shrink: 0;
   gap: 9px;
   padding: 13px;
   border-top: 1px solid #e5edf6;
@@ -235,9 +275,18 @@
 
 .chatbot-input-area input:focus {
   border-color: #3678c4;
+  box-shadow: 0 0 0 2px rgba(54, 120, 196, 0.12);
+}
+
+.chatbot-input-area input:disabled {
+  background: #f5f7fa;
 }
 
 .chatbot-input-area button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   width: 42px;
   border: none;
   border-radius: 11px;
@@ -247,18 +296,36 @@
   cursor: pointer;
 }
 
+.chatbot-input-area button:hover:not(:disabled) {
+  background: #174c89;
+}
+
 .chatbot-input-area button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
+/* Disclaimer */
+
 .chatbot-disclaimer {
+  flex-shrink: 0;
   padding: 0 10px 11px;
   background: white;
   color: #91a3ba;
   text-align: center;
   font-size: 10px;
 }
+
+/* Accessibility */
+
+.chatbot-launcher:focus-visible,
+.chatbot-header-actions button:focus-visible,
+.chatbot-input-area button:focus-visible {
+  outline: 2px solid #4d91e2;
+  outline-offset: 3px;
+}
+
+/* Mobile responsive */
 
 @media (max-width: 480px) {
   .investra-chatbot {
@@ -273,6 +340,7 @@
     left: 10px;
     width: auto;
     height: min(540px, calc(100dvh - 115px));
+    max-height: none;
   }
 
   .chatbot-launcher {
