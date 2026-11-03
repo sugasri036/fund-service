@@ -9,8 +9,7 @@ const INITIAL_MESSAGE = {
 
 const TOKEN_STORAGE_KEY = "token";
 
-const CHATBOT_API_URL =
-  import.meta.env.VITE_CHATBOT_API_URL || "";
+const CHATBOT_API_URL = "https://api-gateway-rz13.onrender.com";
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
